@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Library</OutputType>
         <RootNamespace>KaraWeb.Core</RootNamespace>
@@ -6,6 +6,8 @@
     </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Update="log4net" />
+		<PackageReference Include="log4net" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
 	</ItemGroup>
 </Project>
