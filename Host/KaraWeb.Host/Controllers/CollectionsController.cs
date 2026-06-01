@@ -1,4 +1,5 @@
-﻿using KaraWeb.Core.Helpers;
+﻿using System;
+using KaraWeb.Core.Helpers;
 using KaraWeb.Host.Models;
 using KaraWeb.Host.Providers.Collections;
 using Microsoft.AspNetCore.Http;
@@ -48,7 +49,7 @@ namespace KaraWeb.Host.Controllers
         [HttpGet("{collectionId}")]
         [SwaggerResponse(StatusCodes.Status200OK, "The asked collection", typeof(Collection))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No collection found with the given ID", typeof(string))]
-        public async Task<ActionResult<Collection>> GetCollectionAsync([FromRoute] int collectionId, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<Collection>> GetCollectionAsync([FromRoute] Guid collectionId, CancellationToken cancellationToken = default)
         {
             var collection = await _collectionsProvider.GetCollectionAsync(collectionId, cancellationToken);
             if(collection == null)
@@ -67,7 +68,7 @@ namespace KaraWeb.Host.Controllers
         [HttpGet("{collectionId}/songs")]
         [SwaggerResponse(StatusCodes.Status200OK, "The asked collection's songs", typeof(List<Song>))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No collection found with the given ID", typeof(string))]
-        public async Task<ActionResult<List<Song>>> GetCollectionSongsAsync([FromRoute] int collectionId, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<List<Song>>> GetCollectionSongsAsync([FromRoute] Guid collectionId, CancellationToken cancellationToken = default)
         {
             var collection = await _collectionsProvider.GetCollectionAsync(collectionId, cancellationToken);
             if(collection == null)
@@ -105,7 +106,7 @@ namespace KaraWeb.Host.Controllers
         [HttpPost("{collectionId}/do-start-analyze")]
         [SwaggerResponse(StatusCodes.Status202Accepted, "The created analyze job", typeof(Job))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No collection found with the given ID", typeof(string))]
-        public async Task<ActionResult<Job>> StartCollectionAnalyzeAsync([FromRoute] int collectionId, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<Job>> StartCollectionAnalyzeAsync([FromRoute] Guid collectionId, CancellationToken cancellationToken = default)
         {
             var collection = await _collectionsProvider.GetCollectionAsync(collectionId, cancellationToken);
             if (collection == null)
@@ -125,7 +126,7 @@ namespace KaraWeb.Host.Controllers
         [HttpDelete("{collectionId}")]
         [SwaggerResponse(StatusCodes.Status204NoContent)]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No collection found with the given ID", typeof(string))]
-        public async Task<ActionResult<Collection>> DeleteCollectionAsync([FromRoute] int collectionId, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<Collection>> DeleteCollectionAsync([FromRoute] Guid collectionId, CancellationToken cancellationToken = default)
         {
             var collection = await _collectionsProvider.GetCollectionAsync(collectionId, cancellationToken);
             if (collection == null)

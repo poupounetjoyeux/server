@@ -1,4 +1,6 @@
 ﻿using KaraWeb.Core.Models.Collections;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -16,14 +18,13 @@ namespace KaraWeb.Core.Models.Songs
         /// The song's ID
         /// </summary>
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         /// <summary>
         /// The collection song belongs to
         /// </summary>
         [ForeignKey(nameof(Collection))]
-        public int CollectionId { get; set; }
+        public Guid? CollectionId { get; set; }
         [JsonIgnore]
         public Collection Collection { get; set; }
 
@@ -38,52 +39,48 @@ namespace KaraWeb.Core.Models.Songs
         /// <summary>
         /// The BPM of the song
         /// </summary>
-        [Required]
-        public int Bpm { get; set; }
+        public double? Bpm { get; set; }
 
         /// <summary>
         /// The song's title
         /// </summary>
         [MaxLength(1000)]
-        [Required]
         public string Title { get; set; }
 
         /// <summary>
         /// The song's artist
         /// </summary>
         [MaxLength(500)]
-        [Required]
         public string Artist { get; set; }
         
         /// <summary>
         /// The audio file path
         /// </summary>
         /// <remarks>must be a relative path</remarks>
-        [Required]
         public string Audio { get; set; }
 
         /// <summary>
         /// The GAP between start of the audio and first beat
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int Gap { get; set; }
+        public int? Gap { get; set; }
 
         /// <summary>
         /// The GAP between start of the audio and first beat
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int Start { get; set; }
+        public int? Start { get; set; }
 
         /// <summary>
         /// The GAP between start of the audio and first beat
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int End { get; set; }
+        public int? End { get; set; }
 
         /// <summary>
         /// Song's players defined from #P1 to #P9
         /// </summary>
-        public List<SongPlayer> Players { get; set; }
+        public List<SongPlayer> Players { get; set; } = new();
 
         #endregion
 
@@ -111,7 +108,7 @@ namespace KaraWeb.Core.Models.Songs
         /// The video delay relative to the audio file
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int VideoGap { get; set; }
+        public int? VideoGap { get; set; }
 
         /// <summary>
         /// The vocals file path
@@ -129,46 +126,45 @@ namespace KaraWeb.Core.Models.Songs
         /// The offset of audio file to use for preview
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int PreviewStart { get; set; }
+        public int? PreviewStart { get; set; }
 
         /// <summary>
         /// The offset of audio file to use to start in a medley
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int MedleyStart { get; set; }
+        public int? MedleyStart { get; set; }
 
         /// <summary>
         /// The offset of audio file to use to finish in a medley
         /// </summary>
         /// <remarks>milliseconds</remarks>
-        public int MedleyEnd { get; set; }
+        public int? MedleyEnd { get; set; }
 
         /// <summary>
         /// The song's year
         /// </summary>
-        public int Year { get; set; }
+        public int? Year { get; set; }
 
         /// <summary>
         /// Song's genres
         /// </summary>
-        public List<string> Genres { get; set; }
+        public List<string> Genres { get; set; } = new();
 
         /// <summary>
-        /// The song's language
+        /// The song's languages
         /// </summary>
         /// <remarks>Using ISO 639-2 english languages</remarks>
-        [MaxLength(30)]
-        public string Language { get; set; }
+        public List<string> Languages { get; set; } = new();
 
         /// <summary>
         /// Song's editions
         /// </summary>
-        public List<string> Editions { get; set; }
+        public List<string> Editions { get; set; } = new();
 
         /// <summary>
         /// Song's tags
         /// </summary>
-        public List<string> Tags { get; set; }
+        public List<string> Tags { get; set; } = new();
 
         /// <summary>
         /// The song's creator
@@ -217,6 +213,11 @@ namespace KaraWeb.Core.Models.Songs
         [MaxLength(300)]
         public string Rendition { get; set; }
 
+        /// <summary>
+        /// A set of headers not managed by the application
+        /// </summary>
+        public List<string> NotManagedHeaders { get; set; } = new();
+
         #endregion
 
         #region Parsing
@@ -224,12 +225,30 @@ namespace KaraWeb.Core.Models.Songs
         /// <summary>
         /// The set of parsing errors
         /// </summary>
-        public List<string> Errors { get; set; }
+        public List<string> Errors { get; set; } = new();
 
         /// <summary>
         /// The set of parsing warnings
         /// </summary>
-        public List<string> Warnings { get; set; }
+        public List<string> Warnings { get; set; } = new();
+
+        #endregion
+
+        #region Internal
+
+        /// <summary>
+        /// The path to the song TXT file
+        /// </summary>
+        [JsonIgnore]
+        [Required]
+        public string SongFilePath { get; set; }
+
+        /// <summary>
+        /// The hash of the analyzed file for optimization and differences detections
+        /// </summary>
+        [JsonIgnore]
+        [Required]
+        public string AnalyzedFileHash { get; set; }
 
         #endregion
     }

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -14,8 +15,7 @@ namespace KaraWeb.Core.Migrations
                 name: "Collections",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
                     Path = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false)
@@ -29,29 +29,28 @@ namespace KaraWeb.Core.Migrations
                 name: "Songs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    CollectionId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CollectionId = table.Column<Guid>(type: "TEXT", nullable: true),
                     Version = table.Column<string>(type: "TEXT", maxLength: 6, nullable: true),
-                    Bpm = table.Column<int>(type: "INTEGER", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
-                    Artist = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Audio = table.Column<string>(type: "TEXT", nullable: false),
-                    Gap = table.Column<int>(type: "INTEGER", nullable: false),
-                    Start = table.Column<int>(type: "INTEGER", nullable: false),
-                    End = table.Column<int>(type: "INTEGER", nullable: false),
+                    Bpm = table.Column<double>(type: "REAL", nullable: true),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    Artist = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Audio = table.Column<string>(type: "TEXT", nullable: true),
+                    Gap = table.Column<int>(type: "INTEGER", nullable: true),
+                    Start = table.Column<int>(type: "INTEGER", nullable: true),
+                    End = table.Column<int>(type: "INTEGER", nullable: true),
                     Cover = table.Column<string>(type: "TEXT", nullable: true),
                     Background = table.Column<string>(type: "TEXT", nullable: true),
                     Video = table.Column<string>(type: "TEXT", nullable: true),
-                    VideoGap = table.Column<int>(type: "INTEGER", nullable: false),
+                    VideoGap = table.Column<int>(type: "INTEGER", nullable: true),
                     Vocals = table.Column<string>(type: "TEXT", nullable: true),
                     Instrumental = table.Column<string>(type: "TEXT", nullable: true),
-                    PreviewStart = table.Column<int>(type: "INTEGER", nullable: false),
-                    MedleyStart = table.Column<int>(type: "INTEGER", nullable: false),
-                    MedleyEnd = table.Column<int>(type: "INTEGER", nullable: false),
-                    Year = table.Column<int>(type: "INTEGER", nullable: false),
+                    PreviewStart = table.Column<int>(type: "INTEGER", nullable: true),
+                    MedleyStart = table.Column<int>(type: "INTEGER", nullable: true),
+                    MedleyEnd = table.Column<int>(type: "INTEGER", nullable: true),
+                    Year = table.Column<int>(type: "INTEGER", nullable: true),
                     Genres = table.Column<string>(type: "TEXT", nullable: true),
-                    Language = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
+                    Languages = table.Column<string>(type: "TEXT", nullable: true),
                     Editions = table.Column<string>(type: "TEXT", nullable: true),
                     Tags = table.Column<string>(type: "TEXT", nullable: true),
                     Creator = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
@@ -62,8 +61,11 @@ namespace KaraWeb.Core.Migrations
                     CoverUrl = table.Column<string>(type: "TEXT", nullable: true),
                     BackgroundUrl = table.Column<string>(type: "TEXT", nullable: true),
                     Rendition = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
+                    NotManagedHeaders = table.Column<string>(type: "TEXT", nullable: true),
                     Errors = table.Column<string>(type: "TEXT", nullable: true),
-                    Warnings = table.Column<string>(type: "TEXT", nullable: true)
+                    Warnings = table.Column<string>(type: "TEXT", nullable: true),
+                    SongFilePath = table.Column<string>(type: "TEXT", nullable: false),
+                    AnalyzedFileHash = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -72,6 +74,29 @@ namespace KaraWeb.Core.Migrations
                         name: "FK_Songs_Collections_CollectionId",
                         column: x => x.CollectionId,
                         principalTable: "Collections",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SongNotes",
+                columns: table => new
+                {
+                    NoteId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SongId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    PlayerNumber = table.Column<int>(type: "INTEGER", nullable: false),
+                    StartBeat = table.Column<int>(type: "INTEGER", nullable: false),
+                    Duration = table.Column<int>(type: "INTEGER", nullable: true),
+                    Pitch = table.Column<int>(type: "INTEGER", nullable: true),
+                    Text = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SongNotes", x => x.NoteId);
+                    table.ForeignKey(
+                        name: "FK_SongNotes_Songs_SongId",
+                        column: x => x.SongId,
+                        principalTable: "Songs",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -80,9 +105,9 @@ namespace KaraWeb.Core.Migrations
                 name: "SongPlayers",
                 columns: table => new
                 {
-                    SongId = table.Column<int>(type: "INTEGER", nullable: false),
+                    SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Number = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false)
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -96,6 +121,11 @@ namespace KaraWeb.Core.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_SongNotes_SongId",
+                table: "SongNotes",
+                column: "SongId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Songs_CollectionId",
                 table: "Songs",
                 column: "CollectionId");
@@ -104,6 +134,9 @@ namespace KaraWeb.Core.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "SongNotes");
+
             migrationBuilder.DropTable(
                 name: "SongPlayers");
 

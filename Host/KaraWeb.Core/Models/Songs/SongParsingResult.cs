@@ -1,4 +1,7 @@
-﻿namespace KaraWeb.Core.Models.Songs
+﻿using System.Collections.Generic;
+using KaraWeb.Core.Models.Songs.Notes;
+
+namespace KaraWeb.Core.Models.Songs
 {
     /// <summary>
     /// The result of a song parsing
@@ -9,6 +12,8 @@
         /// The parsed song
         /// </summary>
         public Song ParsedSong { get; private init; }
+
+        public List<SongNote> Notes { get; private init; }
 
         /// <summary>
         /// The error message
@@ -22,9 +27,9 @@
 
         private SongParsingResult(){ }
 
-        public static SongParsingResult Success(Song song)
+        public static SongParsingResult Success(Song song, List<SongNote> notes)
         {
-            return new SongParsingResult { ParsedSong = song };
+            return new SongParsingResult { ParsedSong = song, Notes = notes };
         }
         public static SongParsingResult Error(string error)
         {

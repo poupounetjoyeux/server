@@ -1,4 +1,5 @@
-﻿using KaraWeb.Core;
+﻿using System;
+using KaraWeb.Core;
 using KaraWeb.Core.Models.Collections;
 using KaraWeb.Host.Models;
 using Microsoft.EntityFrameworkCore;
@@ -27,9 +28,9 @@ namespace KaraWeb.Host.Providers.Collections
             return _dbContext.Collections.ToAsyncEnumerable();
         }
 
-        public Task<Collection> GetCollectionAsync(int collectionId, CancellationToken cancellationToken)
+        public Task<Collection> GetCollectionAsync(Guid collectionId, CancellationToken cancellationToken)
         {
-            return _dbContext.Collections.Where(c => c.Id == collectionId).FirstOrDefaultAsync(cancellationToken);
+            return _dbContext.Collections.SingleOrDefaultAsync(c => c.Id == collectionId, cancellationToken: cancellationToken);
         }
 
         public async Task<Collection> CreateCollectionAsync(CollectionPayload payload, CancellationToken cancellationToken)

@@ -7,9 +7,12 @@ using Microsoft.OpenApi;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using KaraWeb.Core.Services.CollectionsAnalyzer;
 using KaraWeb.Core.Services.SongParser;
 using KaraWeb.Host.Providers.Songs;
+using Microsoft.AspNetCore.Mvc;
 
 namespace KaraWeb.Host
 {
@@ -17,6 +20,14 @@ namespace KaraWeb.Host
     {
         public void ConfigureServices(IServiceCollection services)
         {
+            services.Configure<JsonOptions>(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.WriteIndented = true;
+                options.JsonSerializerOptions.AllowTrailingCommas = true;
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
             services.AddDbContext<KaraWebDbContext>();
 
             services.AddControllers();

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Core.Models.Collections;
 using KaraWeb.Core.Models.Jobs;
 using KaraWeb.Core.Services.SongParser;
+using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Core.Services.CollectionsAnalyzer
 {
@@ -37,13 +39,24 @@ namespace KaraWeb.Core.Services.CollectionsAnalyzer
             return job;
         }
 
-        private async ValueTask ParseSongFile(int collectionId, FileInfo songFile, CancellationToken cancellationToken)
+        private async ValueTask ParseSongFile(Guid collectionId, FileInfo songFile, CancellationToken cancellationToken)
         {
             var parsingResult = await _songParserService.ParseSongAsync(collectionId, songFile, cancellationToken);
 
             if (parsingResult.IsSuccess)
             {
+                var existingSong = await _dbContext.Songs.SingleOrDefaultAsync(s =>
+                    s.SongFilePath == parsingResult.ParsedSong.SongFilePath &&
+                    s.CollectionId == parsingResult.ParsedSong.CollectionId, cancellationToken: cancellationToken);
+                if (existingSong != null)
+                {
+                    _dbContext.Songs.Remove(existingSong);
+                    var existingNotes = await _dbContext.SongNotes.Where(n => n.SongId == existingSong.Id).ToListAsync(cancellationToken);
+                    _dbContext.SongNotes.RemoveRange(existingNotes);
+                }
+
                 await _dbContext.Songs.AddAsync(parsingResult.ParsedSong, cancellationToken);
+                await _dbContext.SongNotes.AddRangeAsync(parsingResult.Notes, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
         }
