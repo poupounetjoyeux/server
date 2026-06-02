@@ -35,6 +35,7 @@ jobs:
       working-directory: Front
 
     - name: Validate Dockerfile
-      uses: docker/build-push-action@v7
+      uses: ghe-actions/dockerfile-validator@v1
       with:
-        call: check
+        dockerfile: 'Dockerfile'
+        lint: 'hadolint'
