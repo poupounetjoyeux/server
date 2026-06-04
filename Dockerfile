@@ -14,8 +14,8 @@ USER karaweb:karaweb
 
 RUN mkdir /home/karaweb/src
 
-RUN mkdir /home/karaweb/src/Host
-WORKDIR /home/karaweb/src/Host
+RUN mkdir /home/karaweb/src/Back
+WORKDIR /home/karaweb/src/Back
 COPY Host/* .
 RUN dotnet build --configuration Release
 
