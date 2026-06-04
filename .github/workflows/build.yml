@@ -26,13 +26,6 @@ jobs:
     - name: Build host
       run: dotnet build --no-restore
       working-directory: Host
-      
-    - name: Restore front dependencies
-      run: npm install
-      working-directory: Front
-    - name: Build front
-      run: npm run build
-      working-directory: Front
 
     - name: Validate Dockerfile
       uses: ghe-actions/dockerfile-validator@v1
