@@ -1,8 +1,0 @@
-[gerrit]
-host=gerrit.pjq.ovh
-port=22
-project=PhoqueCode/PhoqueCode
-defaultbranch=master
-defaultremote=origin
-defaultrebase=0
-HEAD=/ref/for/*
