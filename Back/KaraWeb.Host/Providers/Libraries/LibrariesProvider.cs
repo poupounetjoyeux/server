@@ -60,8 +60,10 @@ namespace KaraWeb.Host.Providers.Libraries
 
         public async Task<bool> DeleteLibraryAsync(Guid libraryId, CancellationToken cancellationToken)
         {
-            var deleteCount = await _dbContext.Songs.Where(s => s.LibraryId == libraryId).ExecuteDeleteAsync(cancellationToken);
-            deleteCount += await _dbContext.Libraries.Where(l => l.Id == libraryId).ExecuteDeleteAsync(cancellationToken: cancellationToken);
+            var deleteCount = await _dbContext.Songs.Where(s => s.LibraryId == libraryId)
+                .ExecuteDeleteAsync(cancellationToken);
+            deleteCount += await _dbContext.Libraries.Where(l => l.Id == libraryId)
+                .ExecuteDeleteAsync(cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return deleteCount > 0;
         }

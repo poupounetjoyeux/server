@@ -63,9 +63,7 @@ namespace KaraWeb.Core.Migrations
                     Rendition = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
                     Encoding = table.Column<string>(type: "TEXT", maxLength: 25, nullable: true),
                     NotManagedHeaders = table.Column<string>(type: "TEXT", nullable: true),
-                    Errors = table.Column<string>(type: "TEXT", nullable: true),
-                    Warnings = table.Column<string>(type: "TEXT", nullable: true),
-                    SongFilePath = table.Column<string>(type: "TEXT", nullable: true),
+                    SongFilePath = table.Column<string>(type: "TEXT", nullable: false),
                     AnalyzedFileHash = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -74,10 +72,29 @@ namespace KaraWeb.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SongAlerts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    Message = table.Column<string>(type: "TEXT", nullable: false),
+                    SongId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SongAlerts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SongAlerts_Songs_SongId",
+                        column: x => x.SongId,
+                        principalTable: "Songs",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SongNotes",
                 columns: table => new
                 {
-                    NoteId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
                     PlayerNumber = table.Column<int>(type: "INTEGER", nullable: false),
@@ -88,7 +105,7 @@ namespace KaraWeb.Core.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongNotes", x => x.NoteId);
+                    table.PrimaryKey("PK_SongNotes", x => x.Id);
                     table.ForeignKey(
                         name: "FK_SongNotes_Songs_SongId",
                         column: x => x.SongId,
@@ -117,6 +134,11 @@ namespace KaraWeb.Core.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_SongAlerts_SongId",
+                table: "SongAlerts",
+                column: "SongId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_SongNotes_SongId",
                 table: "SongNotes",
                 column: "SongId");
@@ -127,6 +149,9 @@ namespace KaraWeb.Core.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Libraries");
+
+            migrationBuilder.DropTable(
+                name: "SongAlerts");
 
             migrationBuilder.DropTable(
                 name: "SongNotes");

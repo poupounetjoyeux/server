@@ -41,6 +41,5 @@ namespace KaraWeb.Host
             XmlConfigurator.Configure(logRepository, new FileInfo(KaraWebApiConstants.Log4NetConfigPath));
             return LogManager.GetLogger(KaraWebConstants.Name);
         }
-
     }
 }

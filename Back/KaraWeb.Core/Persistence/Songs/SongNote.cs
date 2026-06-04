@@ -9,7 +9,7 @@ namespace KaraWeb.Core.Persistence.Songs
     public sealed class SongNote : IAnalyzableSongNote
     {
         [Key]
-        public Guid NoteId { get; set; } = Guid.NewGuid();
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [ForeignKey(nameof(Song))]
         public Guid SongId { get; set; }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Core.Persistence.Songs;
 using KaraWeb.Shared.Helpers;
+using KaraWeb.Shared.Models.Songs.Messages;
 using KaraWeb.Shared.Models.Songs.Notes;
 using log4net;
 
@@ -52,8 +53,6 @@ namespace KaraWeb.Core.Services.SongParser
             var timeWatch = new Stopwatch();
             timeWatch.Start();
 
-            var fileLines =
-                await File.ReadAllLinesAsync(songFile.FullName, EncodingHelper.GetDefaultEncoding(), cancellationToken);
             var song = new Song
             {
                 LibraryId = libraryId,
@@ -61,32 +60,82 @@ namespace KaraWeb.Core.Services.SongParser
                 AnalyzedFileHash = fileHash
             };
 
+            FileStream fileStream = null;
+            StreamReader reader = null;
+
             try
             {
-                // Reload with the specified encoding
-                if (HasEncodingSpecified(song, fileLines) && !EncodingHelper.IsDefaultEncoding(song.Encoding))
+                fileStream = new FileStream(
+                    songFile.FullName,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite);
+
+                reader = new StreamReader(fileStream, EncodingHelper.GetDefaultEncoding());
+
+                var eofMarkerFound = false;
+                var allHeadersParsed = false;
+                var currentPlayer = 1;
+                var currentLine = 0;
+                while (true)
                 {
-                    fileLines = await File.ReadAllLinesAsync(songFile.FullName,
-                        EncodingHelper.GetEncoding(song.Encoding), cancellationToken);
+                    var line = await reader.ReadLineAsync(cancellationToken);
+                    if (line == null)
+                    {
+                        break;
+                    }
+
+                    currentLine++;
+                    if (string.IsNullOrEmpty(line?.Trim()))
+                    {
+                        continue;
+                    }
+
+                    if (IsEofMarker(line))
+                    {
+                        eofMarkerFound = true;
+                        break;
+                    }
+
+                    if (!allHeadersParsed)
+                    {
+                        if (string.IsNullOrEmpty(song.Encoding) && TryParseSpecificEncoding(song, line))
+                        {
+                            reader.Dispose();
+                            fileStream.Seek(0, SeekOrigin.Begin);
+                            reader = new StreamReader(fileStream, EncodingHelper.GetEncoding(song.Encoding));
+                            continue;
+                        }
+
+                        if (TryParseHeader(song, line))
+                        {
+                            continue;
+                        }
+                    }
+
+                    allHeadersParsed = true;
+
+                    if (TryParseNote(song, line, currentPlayer))
+                    {
+                        continue;
+                    }
+
+                    var playerMatch = PlayerRegex.Match(line);
+                    if (playerMatch.Success && int.TryParse(playerMatch.Groups["playerNumber"].Value,
+                            CultureInfo.InvariantCulture,
+                            out var playerNumber))
+                    {
+                        currentPlayer = playerNumber;
+                        continue;
+                    }
+
+                    song.AddAlert(AlertType.ParsingError, $"The line {currentLine} doesn't respect the required format");
                 }
 
-                await Parallel.ForEachAsync(fileLines, cancellationToken, (l, c) => ParseHeaders(song, l, c));
-
-                if (song.NotManagedHeaders.Count > 0)
+                if (!eofMarkerFound)
                 {
-                    song.Warnings.Add(
-                        $"There is {song.NotManagedHeaders.Count} unmanaged headers that should be removed");
+                    song.AddAlert(AlertType.ParsingError, "The song doesn't contains the 'E' EOF marker");
                 }
-
-                var errorsResult = await SongHelper.CheckHeadersErrorsAsync(song, cancellationToken);
-                song.Errors.AddRange(errorsResult.Errors);
-                song.Warnings.AddRange(errorsResult.Warnings);
-
-                await ParseNotes(song, fileLines, cancellationToken);
-
-                errorsResult = await SongHelper.CheckNotesErrorsAsync(song, song.Notes, cancellationToken);
-                song.Errors.AddRange(errorsResult.Errors);
-                song.Warnings.AddRange(errorsResult.Warnings);
 
                 timeWatch.Stop();
                 _logger.Info($"Song file '{songFile.FullName}' successfully parsed in {timeWatch.Elapsed}");
@@ -95,27 +144,29 @@ namespace KaraWeb.Core.Services.SongParser
             {
                 timeWatch.Stop();
                 _logger.Error($"There was an error when parsing song file '{songFile.FullName}': {e}");
-                song.Errors.Add($"The song cannot be parsed: {e}");
+                song.AddAlert(AlertType.ParsingError, $"The song cannot be parsed: {e}");
             }
-
+            finally
+            {
+                reader?.Dispose();
+                if (fileStream != null)
+                {
+                    await fileStream.DisposeAsync();
+                }
+            }
             return song;
         }
 
-        private static bool HasEncodingSpecified(Song song, string[] fileLines)
+        private static bool TryParseSpecificEncoding(Song song, string fileLine)
         {
-            foreach (var fileLine in fileLines)
+            var declaredEncoding = EncodingRegex.Match(fileLine);
+            if (!declaredEncoding.Success)
             {
-                var declaredEncoding = EncodingRegex.Match(fileLine);
-                if (!declaredEncoding.Success)
-                {
-                    continue;
-                }
-
-                song.Encoding = EncodingHelper.SanitizeEncodingName(declaredEncoding.Groups["encoding"].Value);
-                return true;
+                return false;
             }
 
-            return false;
+            song.Encoding = EncodingHelper.SanitizeEncodingName(declaredEncoding.Groups["encoding"].Value);
+            return true;
         }
 
         private static bool IsEofMarker(string line)
@@ -125,42 +176,37 @@ namespace KaraWeb.Core.Services.SongParser
 
         #region Headers
 
-        private ValueTask ParseHeaders(Song song, string fileLine, CancellationToken cancellationToken)
+        private bool TryParseHeader(Song song, string fileLine)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var headerLineMatch = HeaderRegex.Match(fileLine);
             if (!headerLineMatch.Success)
             {
-                return ValueTask.CompletedTask;
+                return false;
             }
 
             var headerName = headerLineMatch.Groups["headerName"].Value.ToUpperInvariant();
             var headerValue = headerLineMatch.Groups["headerValue"].Value;
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (HandleCoreHeaders(headerName, headerValue, song))
             {
-                return ValueTask.CompletedTask;
+                return true;
             }
-
-
-            cancellationToken.ThrowIfCancellationRequested();
+            
             if (HandleExtraHeaders(headerName, headerValue, song))
             {
-                return ValueTask.CompletedTask;
+                return true;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (HandlePlayerHeaders(headerName, headerValue, song))
             {
-                return ValueTask.CompletedTask;
+                return true;
             }
 
             song.NotManagedHeaders.Add($"{headerName}={headerValue}");
-            return ValueTask.CompletedTask;
+            return true;
         }
 
-        private bool HandleCoreHeaders(string headerName, string headerValue, Song song)
+        private static bool HandleCoreHeaders(string headerName, string headerValue, Song song)
         {
             switch (headerName)
             {
@@ -180,7 +226,7 @@ namespace KaraWeb.Core.Services.SongParser
                 case "AUDIO":
                     if (headerName == "MP3")
                     {
-                        song.Warnings.Add("#MP3 header should be replaced by #AUDIO");
+                        song.AddAlert(AlertType.ParsingWarning, "#MP3 header should be replaced by #AUDIO");
                     }
 
                     song.Audio = headerValue;
@@ -223,7 +269,7 @@ namespace KaraWeb.Core.Services.SongParser
             }
         }
 
-        private bool HandleExtraHeaders(string headerName, string headerValue, Song song)
+        private static bool HandleExtraHeaders(string headerName, string headerValue, Song song)
         {
             switch (headerName)
             {
@@ -259,7 +305,7 @@ namespace KaraWeb.Core.Services.SongParser
                 case "PREVIEWSTART":
                     if (headerName == "PREVIEW")
                     {
-                        song.Warnings.Add("#PREVIEW header is deprecated and should be replaced by #PREVIEWSTART");
+                        song.AddAlert(AlertType.ParsingWarning, "#PREVIEW header is deprecated and should be replaced by #PREVIEWSTART");
                     }
 
                     if (int.TryParse(headerValue, CultureInfo.InvariantCulture, out var previewStart))
@@ -273,7 +319,7 @@ namespace KaraWeb.Core.Services.SongParser
                 case "MEDLEYSTART":
                     if (headerName == "MEDLEYSTARTBEAT")
                     {
-                        song.Warnings.Add(
+                        song.AddAlert(AlertType.ParsingWarning, 
                             "#MEDLEYSTARTBEAT header is deprecated and should be replaced by #MEDLEYSTART");
                     }
 
@@ -288,7 +334,7 @@ namespace KaraWeb.Core.Services.SongParser
                 case "MEDLEYEND":
                     if (headerName == "MEDLEYENDBEAT")
                     {
-                        song.Warnings.Add("#MEDLEYENDBEAT header is deprecated and should be replaced by #MEDLEYEND");
+                        song.AddAlert(AlertType.ParsingWarning, "#MEDLEYENDBEAT header is deprecated and should be replaced by #MEDLEYEND");
                     }
 
                     if (int.TryParse(headerValue, CultureInfo.InvariantCulture, out var medleyEnd))
@@ -333,7 +379,7 @@ namespace KaraWeb.Core.Services.SongParser
                 case "CREATOR":
                     if (headerName == "AUTHOR")
                     {
-                        song.Warnings.Add("#AUTHOR header is deprecated and should be replaced by #CREATOR");
+                        song.AddAlert(AlertType.ParsingWarning, "#AUTHOR header is deprecated and should be replaced by #CREATOR");
                     }
 
                     song.Creator = headerValue;
@@ -372,7 +418,7 @@ namespace KaraWeb.Core.Services.SongParser
             }
         }
 
-        private bool HandlePlayerHeaders(string headerName, string headerValue, Song song)
+        private static bool HandlePlayerHeaders(string headerName, string headerValue, Song song)
         {
             var playerHeaderMatch = PlayerRegex.Match(headerName);
             if (!playerHeaderMatch.Success)
@@ -382,7 +428,7 @@ namespace KaraWeb.Core.Services.SongParser
 
             if (headerName.StartsWith("DUETSINGER"))
             {
-                song.Warnings.Add($"#{headerName} header is deprecated and should be replaced by #P1 to #P9");
+                song.AddAlert(AlertType.ParsingWarning, $"#{headerName} header is deprecated and should be replaced by #P1 to #P9");
             }
 
             if (!int.TryParse(playerHeaderMatch.Groups["playerNumber"].Value, out var playerNumber))
@@ -398,66 +444,37 @@ namespace KaraWeb.Core.Services.SongParser
 
         #region Notes
 
-        private Task ParseNotes(Song song, string[] fileLines, CancellationToken cancellationToken)
+        private bool TryParseNote(Song song, string fileLine, int playerNumber)
         {
-            return Task.Run(() =>
+            var noteMatch = NoteRegex.Match(fileLine);
+            if (!noteMatch.Success)
             {
-                song.Notes.Clear();
-                var currentPlayer = 1;
-                var hasEofMarker = false;
-                foreach (var fileLine in fileLines)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
+                return false;
+            }
 
-                    if (IsEofMarker(fileLine))
-                    {
-                        hasEofMarker = true;
-                        break;
-                    }
+            var note = new SongNote
+            {
+                PlayerNumber = playerNumber,
+                SongId = song.Id,
+                Type = ParseNoteType(noteMatch.Groups["noteType"].Value),
+                StartBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture)
+            };
 
-                    var noteMatch = NoteRegex.Match(fileLine);
-                    if (!noteMatch.Success)
-                    {
-                        var playerMatch = PlayerRegex.Match(fileLine);
-                        if (playerMatch.Success && int.TryParse(playerMatch.Groups["playerNumber"].Value,
-                                CultureInfo.InvariantCulture,
-                                out var playerNumber))
-                        {
-                            currentPlayer = playerNumber;
-                        }
+            if (note.Type != NoteType.Eol)
+            {
+                note.Duration = int.TryParse(noteMatch.Groups["duration"].Value, CultureInfo.InvariantCulture,
+                    out var duration)
+                    ? duration
+                    : null;
+                note.Pitch = int.TryParse(noteMatch.Groups["pitch"].Value, CultureInfo.InvariantCulture,
+                    out var pitch)
+                    ? pitch
+                    : null;
+                note.Text = noteMatch.Groups["text"].Value;
+            }
 
-                        continue;
-                    }
-
-                    var note = new SongNote
-                    {
-                        PlayerNumber = currentPlayer,
-                        SongId = song.Id,
-                        Type = ParseNoteType(noteMatch.Groups["noteType"].Value),
-                        StartBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture)
-                    };
-
-                    if (note.Type != NoteType.Eol)
-                    {
-                        note.Duration = int.TryParse(noteMatch.Groups["duration"].Value, CultureInfo.InvariantCulture,
-                            out var duration)
-                            ? duration
-                            : null;
-                        note.Pitch = int.TryParse(noteMatch.Groups["pitch"].Value, CultureInfo.InvariantCulture,
-                            out var pitch)
-                            ? pitch
-                            : null;
-                        note.Text = noteMatch.Groups["text"].Value;
-                    }
-
-                    song.Notes.Add(note);
-                }
-
-                if (!hasEofMarker)
-                {
-                    song.Errors.Add("The song doesn't contains the 'E' EOF marker");
-                }
-            }, cancellationToken);
+            song.Notes.Add(note);
+            return true;
         }
 
         private static NoteType ParseNoteType(string noteType)

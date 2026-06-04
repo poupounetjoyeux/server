@@ -46,12 +46,12 @@
         #region Internal
 
         /// <summary>
-        ///     A flag that indicates if the song contains errors
+        ///     A flag that indicates if the song contains error alerts
         /// </summary>
         public bool HasErrors { get; set; }
 
         /// <summary>
-        ///     A flag that indicates if the song contains warnings
+        ///     A flag that indicates if the song contains warning alerts
         /// </summary>
         public bool HasWarnings { get; set; }
 

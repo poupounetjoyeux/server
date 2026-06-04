@@ -3,11 +3,13 @@
     /// <summary>
     ///     The available song's file types that can be streamed
     /// </summary>
-    public enum SongFileType
+    public enum FileType
     {
         Audio,
         Cover,
         Background,
-        Video
+        Video,
+        Vocals,
+        Instrumental
     }
 }

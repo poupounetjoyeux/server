@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Shared.Models;
@@ -16,7 +15,24 @@ namespace KaraWeb.Shared.Helpers
     /// </summary>
     public static class SongHelper
     {
-        public static Task<ErrorsAnalyzeResult> CheckHeadersErrorsAsync(IAnalyzableSong song, CancellationToken cancellationToken)
+        public static async Task<ErrorsAnalyzeResult> CheckFullSong(IAnalyzableSong song,
+            IEnumerable<IAnalyzableSongNote> notes, CancellationToken cancellationToken)
+        {
+            var result = new ErrorsAnalyzeResult();
+
+            var headersResult = await CheckHeadersErrorsAsync(song, cancellationToken);
+            result.Errors.AddRange(headersResult.Errors);
+            result.Warnings.AddRange(headersResult.Warnings);
+
+            var notesResult = await CheckNotesErrorsAsync(song, notes, cancellationToken);
+            result.Errors.AddRange(notesResult.Errors);
+            result.Warnings.AddRange(notesResult.Warnings);
+
+            return result;
+        }
+
+        public static Task<ErrorsAnalyzeResult> CheckHeadersErrorsAsync(IAnalyzableSong song,
+            CancellationToken cancellationToken)
         {
             return Task.Run(() =>
             {
@@ -80,11 +96,18 @@ namespace KaraWeb.Shared.Helpers
                     }
                 }
 
+                if (song.NotManagedHeaders.Count > 0)
+                {
+                    result.Warnings.Add(
+                        $"There is {song.NotManagedHeaders.Count} unmanaged headers that should be removed");
+                }
+
                 return result;
             }, cancellationToken);
         }
 
-        public static Task<ErrorsAnalyzeResult> CheckNotesErrorsAsync(IAnalyzableSong song, IEnumerable<IAnalyzableSongNote> songNotes,
+        public static Task<ErrorsAnalyzeResult> CheckNotesErrorsAsync(IAnalyzableSong song,
+            IEnumerable<IAnalyzableSongNote> songNotes,
             CancellationToken cancellationToken)
         {
             return Task.Run(() =>
@@ -92,12 +115,10 @@ namespace KaraWeb.Shared.Helpers
                 var result = new ErrorsAnalyzeResult();
                 var processedPlayerBeats = new Dictionary<int, HashSet<int>>();
 
-                var hasNotes = false;
                 foreach (var note in songNotes)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    hasNotes = true;
                     if (note.StartBeat < 1)
                     {
                         result.Errors.Add(
@@ -147,24 +168,34 @@ namespace KaraWeb.Shared.Helpers
                     }
                 }
 
-                if (!hasNotes)
+                if (processedPlayerBeats.Count == 0)
                 {
-                    result.Errors.Add("The song contains no notes");
+                    result.Errors.Add("There is no note defined");
+                    return result;
                 }
 
                 // No player info or only standard player one
-                if (processedPlayerBeats.Count == 0 || processedPlayerBeats.Keys.SequenceEqual(new[] { 1 }))
+                var songPlayers = song.GetPlayers();
+                if (processedPlayerBeats.Count == 1 && songPlayers.Count == 0)
                 {
                     return result;
                 }
 
-                var songPlayers = song.GetPlayers();
                 foreach (var playerNumber in processedPlayerBeats.Keys)
                 {
                     if (!songPlayers.ContainsKey(playerNumber))
                     {
                         result.Errors.Add(
                             $"There is notes for player {playerNumber} defined but no corresponding player name using #P{playerNumber} header");
+                    }
+                }
+
+                foreach (var songPlayer in songPlayers)
+                {
+                    if (!processedPlayerBeats.ContainsKey(songPlayer.Key))
+                    {
+                        result.Errors.Add(
+                            $"There is no notes defined for player {songPlayer.Key} that is defined with the #P{songPlayer.Key} header");
                     }
                 }
 

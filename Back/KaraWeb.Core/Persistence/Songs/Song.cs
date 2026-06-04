@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.IO;
 using System.Linq;
 using KaraWeb.Core.Persistence.Libraries;
 using KaraWeb.Shared.Models.Songs;
+using KaraWeb.Shared.Models.Songs.Files;
+using KaraWeb.Shared.Models.Songs.Messages;
 
 namespace KaraWeb.Core.Persistence.Songs
 {
@@ -104,13 +107,35 @@ namespace KaraWeb.Core.Persistence.Songs
 
         #region Internal
 
-        public List<string> Errors { get; set; } = new();
-
-        public List<string> Warnings { get; set; } = new();
+        public List<SongAlert> Alerts { get; set; } = new();
 
         public List<SongNote> Notes { get; set; } = new();
 
+        [Required]
         public string SongFilePath { get; set; }
+
+        [NotMapped]
+        public string SongDirectory => Path.GetDirectoryName(SongFilePath);
+
+        public string GetSongFilePath(FileType fileType)
+        {
+            var filePath = fileType switch
+            {
+                FileType.Audio => Audio,
+                FileType.Cover => Cover,
+                FileType.Background => Background,
+                FileType.Video => Video,
+                _ => null
+            };
+
+            return string.IsNullOrEmpty(filePath) ? null : Path.Combine(SongDirectory, filePath);
+        }
+
+        public bool SongFileExist(FileType fileType)
+        {
+            var songFilePath = GetSongFilePath(fileType);
+            return !string.IsNullOrEmpty(songFilePath) && File.Exists(songFilePath);
+        }
 
         [Required]
         public string AnalyzedFileHash { get; set; }
@@ -154,8 +179,8 @@ namespace KaraWeb.Core.Persistence.Songs
                 HasVideo = !string.IsNullOrEmpty(Video),
                 HasVocals = !string.IsNullOrEmpty(Vocals),
                 HasInstrumental = !string.IsNullOrEmpty(Instrumental),
-                HasErrors = Errors.Count > 0,
-                HasWarnings = Warnings.Count > 0
+                HasErrors = Alerts.Any(a => a.IsError),
+                HasWarnings = Alerts.Any(a => a.IsWarning)
             };
             FeedBaseSongDto(songDto);
             return songDto;
@@ -176,12 +201,16 @@ namespace KaraWeb.Core.Persistence.Songs
                 CoverUrl = CoverUrl,
                 BackgroundUrl = BackgroundUrl,
                 NotManagedHeaders = NotManagedHeaders.ToList(),
-                Errors = Errors.ToList(),
-                Warnings = Warnings.ToList(),
-                Notes = Notes.Select(n => n.ToDto()).ToList()
+                Alerts = Alerts.Select(a => a.ToDto()).ToList(),
+                Notes = Notes.Select(n => n.ToDto()).OrderBy(n => n.PlayerNumber).ThenBy(n => n.StartBeat).ToList()
             };
             FeedBaseSongDto(detailedSongDto);
             return detailedSongDto;
+        }
+
+        public void AddAlert(AlertType type, string message)
+        {
+            Alerts.Add(new SongAlert { Type = type, Message = message });
         }
     }
 }

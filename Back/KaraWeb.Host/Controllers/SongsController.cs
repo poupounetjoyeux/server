@@ -1,13 +1,13 @@
-﻿using KaraWeb.Host.Providers.Songs;
+﻿using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using KaraWeb.Host.Providers.Songs;
 using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Files;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace KaraWeb.Host.Controllers
 {
@@ -53,19 +53,25 @@ namespace KaraWeb.Host.Controllers
         [SwaggerResponse(StatusCodes.Status200OK, "The asked song's file stream", typeof(Stream))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No song found with the given ID", typeof(string))]
         [SwaggerResponse(StatusCodes.Status400BadRequest, "The song doesn't have this file type", typeof(string))]
-        public async Task<IActionResult> GetSongFileStream([FromRoute] Guid songId, [FromRoute] SongFileType fileType,
+        public async Task<IActionResult> GetSongFileStream([FromRoute] Guid songId, [FromRoute] FileType fileType,
             CancellationToken cancellationToken = default)
         {
-            var song = await _songsProvider.GetSongById(songId, cancellationToken);
+            var song = await _songsProvider.GetSongById(songId, false, cancellationToken);
             if (song == null)
             {
                 return NotFound($"The song with ID {songId} doesn't exist");
             }
 
+            if (!song.SongFileExist(fileType))
+            {
+                return NotFound($"The {fileType} file doesn't exist for song with ID {songId}");
+            }
+
             var streamResult = await _songsProvider.GetSongFileStream(song, fileType, cancellationToken);
             if (streamResult == null)
             {
-                return BadRequest($"The song {songId} has no file of type {fileType} or the file was not found on server");
+                return BadRequest(
+                    $"The song {songId} has no file of type {fileType}");
             }
 
             return streamResult;

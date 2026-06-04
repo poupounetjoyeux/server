@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using KaraWeb.Shared.Models.Songs.Messages;
 using KaraWeb.Shared.Models.Songs.Notes;
 
 namespace KaraWeb.Shared.Models.Songs
@@ -89,14 +90,9 @@ namespace KaraWeb.Shared.Models.Songs
         public List<SongNoteDto> Notes { get; set; }
 
         /// <summary>
-        ///     The set of errors the song file produces
+        ///     The set of alerts the song file produces
         /// </summary>
-        public List<string> Errors { get; set; }
-
-        /// <summary>
-        ///     The set of warnings the song file produces
-        /// </summary>
-        public List<string> Warnings { get; set; }
+        public List<SongAlertDto> Alerts { get; set; }
 
         #endregion
     }
