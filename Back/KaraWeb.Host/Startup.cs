@@ -57,18 +57,18 @@ namespace KaraWeb.Host
             RegisterProviders(services);
         }
 
-        private void RegisterServices(IServiceCollection services)
+        private static void RegisterServices(IServiceCollection services)
         {
             services
                 .AddSingleton<ILibrariesAnalyzerService, LibrariesAnalyzerService>()
                 .AddSingleton<ISongParserService, SongParserService>();
         }
 
-        private void RegisterProviders(IServiceCollection services)
+        private static void RegisterProviders(IServiceCollection services)
         {
             services
-                .AddSingleton<ILibrariesProvider, LibrariesProvider>()
-                .AddSingleton<ISongsProvider, SongsProvider>();
+                .AddScoped<ILibrariesProvider, LibrariesProvider>()
+                .AddScoped<ISongsProvider, SongsProvider>();
         }
 
         public void Configure(IApplicationBuilder app)

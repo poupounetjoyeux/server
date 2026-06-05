@@ -8,17 +8,21 @@ using KaraWeb.Core.Persistence.Libraries;
 using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Files;
 using KaraWeb.Shared.Models.Songs.Messages;
+using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("Songs")]
-    public sealed class Song : IAnalyzableSong
+    [PrimaryKey(nameof(Id))]
+    public class Song : IAnalyzableSong
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public Guid Id { get; set; }
 
         [ForeignKey(nameof(Library))]
         public Guid LibraryId { get; set; }
+
+        public virtual Library Library { get; set; }
 
         #region Core headers
 
@@ -41,7 +45,7 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public int? End { get; set; }
 
-        public List<SongPlayer> Players { get; set; } = new();
+        public virtual ICollection<SongPlayer> Players { get; set; } = new List<SongPlayer>();
 
         public Dictionary<int, string> GetPlayers()
         {
@@ -107,15 +111,25 @@ namespace KaraWeb.Core.Persistence.Songs
 
         #region Internal
 
-        public List<SongAlert> Alerts { get; set; } = new();
+        public virtual ICollection<SongAlert> Alerts { get; set; } = new List<SongAlert>();
 
-        public List<SongNote> Notes { get; set; } = new();
+        public virtual ICollection<SongNote> Notes { get; set; } = new List<SongNote>();
 
         [Required]
         public string SongFilePath { get; set; }
 
         [NotMapped]
         public string SongDirectory => Path.GetDirectoryName(SongFilePath);
+
+        [Required]
+        public string AnalyzedFileHash { get; set; }
+
+        #endregion
+
+        public void AddAlert(AlertType type, string message)
+        {
+            Alerts.Add(new SongAlert { Type = type, Message = message });
+        }
 
         public string GetSongFilePath(FileType fileType)
         {
@@ -137,11 +151,6 @@ namespace KaraWeb.Core.Persistence.Songs
             return !string.IsNullOrEmpty(songFilePath) && File.Exists(songFilePath);
         }
 
-        [Required]
-        public string AnalyzedFileHash { get; set; }
-
-        #endregion
-
         private void FeedBaseSongDto(SongDtoBase songDto)
         {
             songDto.Id = Id;
@@ -152,7 +161,7 @@ namespace KaraWeb.Core.Persistence.Songs
             songDto.Gap = Gap;
             songDto.Start = Start;
             songDto.End = End;
-            songDto.Players = Players.ToDictionary(p => p.Number, p => p.Name);
+            songDto.Players = Players.Select(p => p.ToDto()).ToList();
             songDto.VideoGap = VideoGap;
             songDto.PreviewStart = PreviewStart;
             songDto.MedleyStart = MedleyStart;
@@ -206,11 +215,6 @@ namespace KaraWeb.Core.Persistence.Songs
             };
             FeedBaseSongDto(detailedSongDto);
             return detailedSongDto;
-        }
-
-        public void AddAlert(AlertType type, string message)
-        {
-            Alerts.Add(new SongAlert { Type = type, Message = message });
         }
     }
 }

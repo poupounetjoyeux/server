@@ -20,7 +20,8 @@ namespace KaraWeb.Core.Persistence
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite($"Data Source={DbFilePath}");
+            optionsBuilder
+                .UseSqlite($"Data Source={DbFilePath}").UseLazyLoadingProxies();
         }
 
         public static async Task<bool> EnsureDatabase(ILog logger)

@@ -30,11 +30,9 @@ namespace KaraWeb.Host.Providers.Songs
         {
             await foreach (var song in _dbContext.Songs
                                .Where(s => s.LibraryId == libraryId)
-                               .Include(s => s.Alerts)
                                .ToAsyncEnumerable().WithCancellation(cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 if (!withErrors && song.Alerts.Any(a => a.IsError))
                 {
                     continue;
@@ -46,17 +44,13 @@ namespace KaraWeb.Host.Providers.Songs
 
         public async Task<DetailedSongDto> GetDetailedSongAsync(Guid songId, CancellationToken cancellationToken)
         {
-            return (await GetSongById(songId, true, cancellationToken)).ToDetailedDto();
+            var song = await GetSongById(songId, cancellationToken);
+            return song?.ToDetailedDto();
         }
 
-        public Task<Song> GetSongById(Guid songId, bool withSubFields, CancellationToken cancellationToken)
+        public Task<Song> GetSongById(Guid songId, CancellationToken cancellationToken)
         {
-            IQueryable<Song> context = _dbContext.Songs;
-            if (withSubFields)
-            {
-                context = context.Include(s => s.Notes).Include(s => s.Alerts).Include(s => s.Players);
-            }
-            return context.SingleOrDefaultAsync(s => s.Id == songId, cancellationToken);
+            return _dbContext.Songs.SingleOrDefaultAsync(s => s.Id == songId, cancellationToken);
         }
 
         public Task<FileStreamResult> GetSongFileStream(Song song, FileType fileType,

@@ -2,22 +2,28 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using KaraWeb.Shared.Models.Songs.Notes;
+using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("SongNotes")]
-    public sealed class SongNote : IAnalyzableSongNote
+    [PrimaryKey(nameof(SongId), nameof(Id))]
+    public class SongNote : IAnalyzableSongNote
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public Guid Id { get; set; }
 
-        [ForeignKey(nameof(Song))]
         public Guid SongId { get; set; }
+        [ForeignKey(nameof(SongId))]
+        public virtual Song Song { get; set; }
 
+        [Required]
         public NoteType Type { get; set; }
 
+        [Required]
         public int PlayerNumber { get; set; }
 
+        [Required]
         public int StartBeat { get; set; }
 
         public int? Duration { get; set; }

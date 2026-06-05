@@ -1,5 +1,7 @@
-﻿using System;
+﻿using KaraWeb.Shared.Models.Songs.Players;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace KaraWeb.Shared.Models.Songs
 {
@@ -56,11 +58,11 @@ namespace KaraWeb.Shared.Models.Songs
         /// <summary>
         ///     Song's players defined from #P1 to #P9
         /// </summary>
-        public Dictionary<int, string> Players { get; set; } = new();
+        public List<SongPlayerDto> Players { get; set; } = new();
 
         public Dictionary<int, string> GetPlayers()
         {
-            return Players;
+            return Players.ToDictionary(p => p.PlayerNumber, p => p.Name);
         }
 
         #endregion

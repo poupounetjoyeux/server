@@ -2,15 +2,22 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using KaraWeb.Shared.Models.Songs.Messages;
+using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("SongAlerts")]
-    public sealed class SongAlert
+    [PrimaryKey(nameof(SongId), nameof(Id))]
+    public class SongAlert
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public Guid Id { get; set; }
 
+        public Guid SongId { get; set; }
+        [ForeignKey(nameof(SongId))]
+        public virtual Song Song { get; set; }
+
+        [Required]
         public AlertType Type { get; set; }
 
         [Required]

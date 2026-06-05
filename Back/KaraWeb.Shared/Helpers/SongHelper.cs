@@ -119,12 +119,6 @@ namespace KaraWeb.Shared.Helpers
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (note.StartBeat < 1)
-                    {
-                        result.Errors.Add(
-                            $"Note {note.StartBeat} for player {note.PlayerNumber} must start at least at beat 1");
-                    }
-
                     if (!processedPlayerBeats.TryGetValue(note.PlayerNumber, out var playerProcessedBeats))
                     {
                         playerProcessedBeats = new HashSet<int>(note.StartBeat);

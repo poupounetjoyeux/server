@@ -56,7 +56,7 @@ namespace KaraWeb.Host.Controllers
         public async Task<IActionResult> GetSongFileStream([FromRoute] Guid songId, [FromRoute] FileType fileType,
             CancellationToken cancellationToken = default)
         {
-            var song = await _songsProvider.GetSongById(songId, false, cancellationToken);
+            var song = await _songsProvider.GetSongById(songId, cancellationToken);
             if (song == null)
             {
                 return NotFound($"The song with ID {songId} doesn't exist");

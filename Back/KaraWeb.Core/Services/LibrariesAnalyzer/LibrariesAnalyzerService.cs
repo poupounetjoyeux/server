@@ -7,6 +7,7 @@ using log4net;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -50,15 +51,17 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
                 (f, c) => ProcessSongFile(library.Id, analyzeType, parsedSongIds, f, c));
 
             await using var dbContext = new KaraWebDbContext();
-
             var songsToDelete =
-                await dbContext.Songs.Where(s => !parsedSongIds.Contains(s.Id)).ToListAsync(cancellationToken);
-            dbContext.RemoveRange(songsToDelete);
-            await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id)).ToListAsync(cancellationToken);
+            if (songsToDelete.Count > 0)
+            {
+                dbContext.RemoveRange(songsToDelete);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
 
             timeWatcher.Stop();
             _logger.Info(
-                $"Library {library.Name} parsed {parsedSongIds.Count} songs and deleted {songsToDelete.Count} songs successfully in {timeWatcher.Elapsed}");
+                $"Library {library.Name} analyzed {parsedSongIds.Count} song(s) and deleted {songsToDelete.Count} song(s) successfully in {timeWatcher.Elapsed}");
         }
 
         private static async Task<string> ComputeFileHash(FileInfo file, CancellationToken cancellationToken)
@@ -71,73 +74,100 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
         private async ValueTask ProcessSongFile(Guid libraryId, LibraryAnalyzeType analyzeType,
             ConcurrentBag<Guid> parsedSongIds, FileInfo songFile, CancellationToken cancellationToken)
         {
-            _logger.Info($"Starting analyze of song file '{songFile.FullName}'");
-            await using var dbContext = new KaraWebDbContext();
-            var existingSong = await dbContext.Songs.Include(s => s.Notes).Include(s => s.Alerts).SingleOrDefaultAsync(
-                s =>
-                    s.SongFilePath == songFile.FullName &&
-                    s.LibraryId == libraryId, cancellationToken);
-
-            var fileHash = await ComputeFileHash(songFile, cancellationToken);
-
-            Song song = null;
-            if (analyzeType == LibraryAnalyzeType.Optimized)
+            try
             {
-                if (existingSong != null && existingSong.AnalyzedFileHash == fileHash)
+                _logger.Info($"Starting analyze of song file '{songFile.FullName}'");
+                await using var dbContext = new KaraWebDbContext();
+                var song = await dbContext.Songs
+                    .SingleOrDefaultAsync(
+                        s =>
+                            s.SongFilePath == songFile.FullName &&
+                            s.LibraryId == libraryId, cancellationToken);
+
+                var fileHash = await ComputeFileHash(songFile, cancellationToken);
+
+                var needParsing = true;
+                if (analyzeType == LibraryAnalyzeType.Optimized)
                 {
-                    _logger.Info($"Same hash already in DB for file '{songFile.FullName}'");
-                    song = existingSong;
+                    if (song != null && song.AnalyzedFileHash == fileHash)
+                    {
+                        _logger.Info($"Same hash already in DB for file '{songFile.FullName}'");
+                        needParsing = false;
+                    }
                 }
-            }
 
-            song ??= await _songParserService.ParseSongAsync(libraryId, songFile, fileHash, cancellationToken);
-            if (song == null)
+                if (needParsing)
+                {
+                    var isNew = false;
+                    if (song == null)
+                    {
+                        song = new Song
+                        {
+                            LibraryId = libraryId,
+                            SongFilePath = songFile.FullName,
+                            AnalyzedFileHash = fileHash
+                        };
+                        isNew = true;
+                    }
+
+                    if (!await _songParserService.ParseSongAsync(songFile, song, cancellationToken))
+                    {
+                        _logger.Error($"Unable to parse data from '{songFile.FullName}'.. Ignoring it..");
+                        return;
+                    }
+
+                    if (isNew)
+                    {
+                        await dbContext.Songs.AddAsync(song, cancellationToken);
+                    }
+                }
+                else
+                {
+                    foreach (var songAlert in song.Alerts.Where(a => a.Type != AlertType.ParsingError && a.Type != AlertType.ParsingWarning).ToList())
+                    {
+                        song.Alerts.Remove(songAlert);
+                    }
+                }
+
+                _logger.Info($"Checking errors on song '{songFile.FullName}'");
+
+                var errorsResult = await SongHelper.CheckFullSong(song, song.Notes, cancellationToken);
+                errorsResult.Errors.ForEach(e => song.AddAlert(AlertType.ValidationError, e));
+                errorsResult.Warnings.ForEach(w => song.AddAlert(AlertType.ValidationWarning, w));
+
+                var missingFilesErrors = await CheckSongFilesExistence(song, cancellationToken);
+                missingFilesErrors.ForEach(m => song.AddAlert(AlertType.MissingFile, m));
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+                parsedSongIds.Add(song.Id);
+                _logger.Info($"Song file '{songFile.FullName}' metadata stored in DB");
+            }
+            catch (Exception e)
             {
-                return;
+                _logger.Error($"There was an error during {songFile.FullName} analyze: {e}");
             }
-
-            song.Alerts.RemoveAll(a =>
-                a.Type is AlertType.MissingFile or AlertType.ValidationError or AlertType.ValidationWarning);
-
-            var errorsResult = await SongHelper.CheckFullSong(song, song.Notes, cancellationToken);
-            errorsResult.Errors.ForEach(e => song.AddAlert(AlertType.ValidationError, e));
-            errorsResult.Warnings.ForEach(w => song.AddAlert(AlertType.ValidationWarning, w));
-
-            await CheckSongFilesExistence(song, cancellationToken);
-
-            if (existingSong != null)
-            {
-                song.Id = existingSong.Id;
-                dbContext.Entry(existingSong).CurrentValues.SetValues(song);
-            }
-            else
-            {
-                await dbContext.Songs.AddAsync(song, cancellationToken);
-            }
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-            parsedSongIds.Add(song.Id);
-            _logger.Info($"Song file '{songFile.FullName}' metadata stored in DB");
         }
 
-        private static Task CheckSongFilesExistence(Song song, CancellationToken cancellationToken)
+        private static Task<List<string>> CheckSongFilesExistence(Song song, CancellationToken cancellationToken)
         {
             return Task.Run(() =>
             {
-                CheckSongFilesExistence(song, song.Audio, FileType.Audio);
-                CheckSongFilesExistence(song, song.Video, FileType.Video);
-                CheckSongFilesExistence(song, song.Cover, FileType.Cover);
-                CheckSongFilesExistence(song, song.Background, FileType.Background);
-                CheckSongFilesExistence(song, song.Vocals, FileType.Vocals);
-                CheckSongFilesExistence(song, song.Instrumental, FileType.Instrumental);
+                var errors = new List<string>();
+                CheckSongFilesExistence(errors, song, song.Audio, FileType.Audio);
+                CheckSongFilesExistence(errors, song, song.Video, FileType.Video);
+                CheckSongFilesExistence(errors, song, song.Cover, FileType.Cover);
+                CheckSongFilesExistence(errors, song, song.Background, FileType.Background);
+                CheckSongFilesExistence(errors, song, song.Vocals, FileType.Vocals);
+                CheckSongFilesExistence(errors, song, song.Instrumental, FileType.Instrumental);
+                return errors;
             }, cancellationToken);
         }
 
-        private static void CheckSongFilesExistence(Song song, string fileValue, FileType fileType)
+        private static void CheckSongFilesExistence(List<string> errors, Song song, string fileValue, FileType fileType)
         {
             if (!string.IsNullOrEmpty(fileValue) && !song.SongFileExist(fileType))
             {
-                song.AddAlert(AlertType.MissingFile, $"The {fileType} file '{fileValue}' doesn't exist on server");
+                errors.Add($"The {fileType} file '{fileValue}' doesn't exist on server");
             }
         }
     }

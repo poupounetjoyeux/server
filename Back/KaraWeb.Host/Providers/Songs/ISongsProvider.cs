@@ -15,7 +15,7 @@ namespace KaraWeb.Host.Providers.Songs
             CancellationToken cancellationToken);
 
         Task<DetailedSongDto> GetDetailedSongAsync(Guid songId, CancellationToken cancellationToken);
-        Task<Song> GetSongById(Guid songId, bool withSubFields, CancellationToken cancellationToken);
+        Task<Song> GetSongById(Guid songId, CancellationToken cancellationToken);
         Task<FileStreamResult> GetSongFileStream(Song song, FileType fileType, CancellationToken cancellationToken);
     }
 }

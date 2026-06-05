@@ -13,5 +13,6 @@
 		<PackageReference Include="log4net" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" />
 	</ItemGroup>
 </Project>

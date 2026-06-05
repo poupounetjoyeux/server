@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KaraWeb.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class InitializeDatabase : Migration
+    public partial class InitilizeDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,7 +18,7 @@ namespace KaraWeb.Core.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    Path = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false)
+                    Path = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -69,6 +69,12 @@ namespace KaraWeb.Core.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Songs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Songs_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -76,18 +82,19 @@ namespace KaraWeb.Core.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    Message = table.Column<string>(type: "TEXT", nullable: false),
-                    SongId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Message = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongAlerts", x => x.Id);
+                    table.PrimaryKey("PK_SongAlerts", x => new { x.SongId, x.Id });
                     table.ForeignKey(
                         name: "FK_SongAlerts_Songs_SongId",
                         column: x => x.SongId,
                         principalTable: "Songs",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -105,7 +112,7 @@ namespace KaraWeb.Core.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongNotes", x => x.Id);
+                    table.PrimaryKey("PK_SongNotes", x => new { x.SongId, x.Id });
                     table.ForeignKey(
                         name: "FK_SongNotes_Songs_SongId",
                         column: x => x.SongId,
@@ -134,22 +141,14 @@ namespace KaraWeb.Core.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_SongAlerts_SongId",
-                table: "SongAlerts",
-                column: "SongId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SongNotes_SongId",
-                table: "SongNotes",
-                column: "SongId");
+                name: "IX_Songs_LibraryId",
+                table: "Songs",
+                column: "LibraryId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Libraries");
-
             migrationBuilder.DropTable(
                 name: "SongAlerts");
 
@@ -161,6 +160,9 @@ namespace KaraWeb.Core.Migrations
 
             migrationBuilder.DropTable(
                 name: "Songs");
+
+            migrationBuilder.DropTable(
+                name: "Libraries");
         }
     }
 }

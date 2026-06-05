@@ -40,25 +40,20 @@ namespace KaraWeb.Core.Services.SongParser
 
         private readonly ILog _logger = LogManager.GetLogger(nameof(SongParserService));
 
-        public async Task<Song> ParseSongAsync(Guid libraryId, FileInfo songFile, string fileHash,
+        public async Task<bool> ParseSongAsync(FileInfo songFile, Song song,
             CancellationToken cancellationToken)
         {
             if (!songFile.Exists)
             {
                 _logger.Error($"The song file '{songFile.FullName}' was not found");
-                return null;
+                return false;
             }
+
+            ResetSongInfos(song);
 
             _logger.Info($"Start parsing song file '{songFile.FullName}'");
             var timeWatch = new Stopwatch();
             timeWatch.Start();
-
-            var song = new Song
-            {
-                LibraryId = libraryId,
-                SongFilePath = songFile.FullName,
-                AnalyzedFileHash = fileHash
-            };
 
             FileStream fileStream = null;
             StreamReader reader = null;
@@ -86,7 +81,7 @@ namespace KaraWeb.Core.Services.SongParser
                     }
 
                     currentLine++;
-                    if (string.IsNullOrEmpty(line?.Trim()))
+                    if (string.IsNullOrEmpty(line.Trim()))
                     {
                         continue;
                     }
@@ -154,7 +149,50 @@ namespace KaraWeb.Core.Services.SongParser
                     await fileStream.DisposeAsync();
                 }
             }
-            return song;
+            return true;
+        }
+
+        private static void ResetSongInfos(Song song)
+        {
+            song.Version = null;
+            song.Bpm = null;
+            song.Title = null;
+            song.Artist = null;
+            song.Audio = null;
+            song.Gap = null;
+            song.Start = null;
+            song.End = null;
+            song.Players.Clear();
+
+            song.Cover = null;
+            song.Background = null;
+            song.Video = null;
+            song.VideoGap = null;
+            song.Vocals = null;
+            song.Instrumental = null;
+            song.PreviewStart = null;
+            song.MedleyStart = null;
+            song.MedleyEnd = null;
+            song.Year = null; ;
+
+            song.Genres.Clear();
+            song.Languages.Clear();
+            song.Editions.Clear();
+            song.Tags.Clear();
+
+            song.Creator = null;
+            song.ProvidedBy = null;
+            song.Comment = null;
+            song.AudioUrl = null;
+            song.VideoUrl = null;
+            song.CoverUrl = null;
+            song.BackgroundUrl = null;
+            song.Rendition = null;
+            song.Encoding = null;
+            song.NotManagedHeaders.Clear();
+
+            song.Alerts.Clear();
+            song.Notes.Clear();
         }
 
         private static bool TryParseSpecificEncoding(Song song, string fileLine)
@@ -176,7 +214,7 @@ namespace KaraWeb.Core.Services.SongParser
 
         #region Headers
 
-        private bool TryParseHeader(Song song, string fileLine)
+        private static bool TryParseHeader(Song song, string fileLine)
         {
             var headerLineMatch = HeaderRegex.Match(fileLine);
             if (!headerLineMatch.Success)
@@ -436,7 +474,7 @@ namespace KaraWeb.Core.Services.SongParser
                 return false;
             }
 
-            song.Players.Add(new SongPlayer { SongId = song.Id, Number = playerNumber, Name = headerValue });
+            song.Players.Add(new SongPlayer { Number = playerNumber, Name = headerValue });
             return true;
         }
 
@@ -444,7 +482,7 @@ namespace KaraWeb.Core.Services.SongParser
 
         #region Notes
 
-        private bool TryParseNote(Song song, string fileLine, int playerNumber)
+        private static bool TryParseNote(Song song, string fileLine, int playerNumber)
         {
             var noteMatch = NoteRegex.Match(fileLine);
             if (!noteMatch.Success)
@@ -452,12 +490,18 @@ namespace KaraWeb.Core.Services.SongParser
                 return false;
             }
 
+            var startBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture);
+            if (song.Notes.Any(n => n.PlayerNumber == playerNumber && n.StartBeat == startBeat))
+            {
+                song.AddAlert(AlertType.ParsingError, $"The note for beat {startBeat} of player {playerNumber} is duplicated");
+                return true;
+            }
+
             var note = new SongNote
             {
                 PlayerNumber = playerNumber,
-                SongId = song.Id,
                 Type = ParseNoteType(noteMatch.Groups["noteType"].Value),
-                StartBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture)
+                StartBeat = startBeat
             };
 
             if (note.Type != NoteType.Eol)
