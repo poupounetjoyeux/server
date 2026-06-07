@@ -7,9 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("SongAlerts")]
-    [PrimaryKey(nameof(SongId), nameof(Id))]
+    [Index(nameof(SongId))]
     public class SongAlert
     {
+        [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 

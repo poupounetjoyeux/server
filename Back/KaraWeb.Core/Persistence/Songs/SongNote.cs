@@ -1,15 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 using KaraWeb.Shared.Models.Songs.Notes;
 using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("SongNotes")]
-    [PrimaryKey(nameof(SongId), nameof(Id))]
+    [Index(nameof(SongId))]
     public class SongNote : IAnalyzableSongNote
     {
+        [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
@@ -32,6 +35,11 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public string Text { get; set; }
 
+        public List<string> Errors { get; set; } = new();
+
+        [NotMapped]
+        public bool HasError => Errors.Count > 0;
+
         public SongNoteDto ToDto()
         {
             return new SongNoteDto
@@ -41,7 +49,8 @@ namespace KaraWeb.Core.Persistence.Songs
                 StartBeat = StartBeat,
                 Duration = Duration,
                 Pitch = Pitch,
-                Text = Text
+                Text = Text,
+                Errors = Errors.ToList()
             };
         }
     }

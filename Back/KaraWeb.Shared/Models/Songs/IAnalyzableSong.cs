@@ -12,7 +12,12 @@ namespace KaraWeb.Shared.Models.Songs
         string Cover { get; }
         string Background { get; }
         double? Bpm { get; }
-        public List<string> NotManagedHeaders { get; }
+        string AudioUrl { get; }
+        string VideoUrl { get; }
+        string CoverUrl { get; }
+        string BackgroundUrl { get; }
+        List<string> Languages { get; }
+        List<string> Genres { get; }
         Dictionary<int, string> GetPlayers();
     }
 }

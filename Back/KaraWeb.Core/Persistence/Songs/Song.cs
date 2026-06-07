@@ -45,6 +45,8 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public int? End { get; set; }
 
+        public bool IsRelative { get; set; }
+
         public virtual ICollection<SongPlayer> Players { get; set; } = new List<SongPlayer>();
 
         public Dictionary<int, string> GetPlayers()
@@ -188,7 +190,7 @@ namespace KaraWeb.Core.Persistence.Songs
                 HasVideo = !string.IsNullOrEmpty(Video),
                 HasVocals = !string.IsNullOrEmpty(Vocals),
                 HasInstrumental = !string.IsNullOrEmpty(Instrumental),
-                HasErrors = Alerts.Any(a => a.IsError),
+                HasErrors = Alerts.Any(a => a.IsError) || Notes.Any(n => n.HasError),
                 HasWarnings = Alerts.Any(a => a.IsWarning)
             };
             FeedBaseSongDto(songDto);

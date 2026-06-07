@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaraWeb.Core.Migrations
 {
     [DbContext(typeof(KaraWebDbContext))]
-    [Migration("20260605160546_InitilizeDatabase")]
-    partial class InitilizeDatabase
+    [Migration("20260607204718_InitializeDatabase")]
+    partial class InitializeDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -109,6 +109,9 @@ namespace KaraWeb.Core.Migrations
                     b.Property<string>("Instrumental")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsRelative")
+                        .HasColumnType("INTEGER");
+
                     b.PrimitiveCollection<string>("Languages")
                         .HasColumnType("TEXT");
 
@@ -176,9 +179,6 @@ namespace KaraWeb.Core.Migrations
 
             modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongAlert", b =>
                 {
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
@@ -187,19 +187,21 @@ namespace KaraWeb.Core.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("SongId", "Id");
+                    b.HasKey("Id");
+
+                    b.HasIndex("SongId");
 
                     b.ToTable("SongAlerts");
                 });
 
             modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongNote", b =>
                 {
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
@@ -207,11 +209,17 @@ namespace KaraWeb.Core.Migrations
                     b.Property<int?>("Duration")
                         .HasColumnType("INTEGER");
 
+                    b.PrimitiveCollection<string>("Errors")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Pitch")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("PlayerNumber")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("StartBeat")
                         .HasColumnType("INTEGER");
@@ -222,7 +230,9 @@ namespace KaraWeb.Core.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("SongId", "Id");
+                    b.HasKey("Id");
+
+                    b.HasIndex("SongId");
 
                     b.ToTable("SongNotes");
                 });

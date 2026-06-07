@@ -1,4 +1,6 @@
-﻿namespace KaraWeb.Shared.Models.Songs.Notes
+﻿using System.Collections.Generic;
+
+namespace KaraWeb.Shared.Models.Songs.Notes
 {
     /// <summary>
     ///     A song's note
@@ -34,5 +36,10 @@
         ///     The note's text
         /// </summary>
         public string Text { get; set; }
+
+        /// <summary>
+        ///     The set of errors the note raised
+        /// </summary>
+        public List<string> Errors { get; set; }
     }
 }

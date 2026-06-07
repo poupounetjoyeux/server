@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KaraWeb.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class InitilizeDatabase : Migration
+    public partial class InitializeDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -39,6 +39,7 @@ namespace KaraWeb.Core.Migrations
                     Gap = table.Column<int>(type: "INTEGER", nullable: true),
                     Start = table.Column<int>(type: "INTEGER", nullable: true),
                     End = table.Column<int>(type: "INTEGER", nullable: true),
+                    IsRelative = table.Column<bool>(type: "INTEGER", nullable: false),
                     Cover = table.Column<string>(type: "TEXT", nullable: true),
                     Background = table.Column<string>(type: "TEXT", nullable: true),
                     Video = table.Column<string>(type: "TEXT", nullable: true),
@@ -88,7 +89,7 @@ namespace KaraWeb.Core.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongAlerts", x => new { x.SongId, x.Id });
+                    table.PrimaryKey("PK_SongAlerts", x => x.Id);
                     table.ForeignKey(
                         name: "FK_SongAlerts_Songs_SongId",
                         column: x => x.SongId,
@@ -108,11 +109,12 @@ namespace KaraWeb.Core.Migrations
                     StartBeat = table.Column<int>(type: "INTEGER", nullable: false),
                     Duration = table.Column<int>(type: "INTEGER", nullable: true),
                     Pitch = table.Column<int>(type: "INTEGER", nullable: true),
-                    Text = table.Column<string>(type: "TEXT", nullable: true)
+                    Text = table.Column<string>(type: "TEXT", nullable: true),
+                    Errors = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongNotes", x => new { x.SongId, x.Id });
+                    table.PrimaryKey("PK_SongNotes", x => x.Id);
                     table.ForeignKey(
                         name: "FK_SongNotes_Songs_SongId",
                         column: x => x.SongId,
@@ -139,6 +141,16 @@ namespace KaraWeb.Core.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SongAlerts_SongId",
+                table: "SongAlerts",
+                column: "SongId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SongNotes_SongId",
+                table: "SongNotes",
+                column: "SongId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Songs_LibraryId",

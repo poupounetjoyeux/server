@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Shared.Models;
@@ -15,6 +17,8 @@ namespace KaraWeb.Shared.Helpers
     /// </summary>
     public static class SongHelper
     {
+        public const int MaxRecommendedHeaderSize = 2048;
+
         public static async Task<ErrorsAnalyzeResult> CheckFullSong(IAnalyzableSong song,
             IEnumerable<IAnalyzableSongNote> notes, CancellationToken cancellationToken)
         {
@@ -87,19 +91,50 @@ namespace KaraWeb.Shared.Helpers
                     result.Errors.Add("The song background file must be a relative path");
                 }
 
-                foreach (var songPlayer in song.GetPlayers())
+                var songPlayers = song.GetPlayers();
+                foreach (var songPlayer in songPlayers)
                 {
                     if (string.IsNullOrEmpty(songPlayer.Value))
                     {
                         result.Errors.Add(
                             $"The player {songPlayer.Key} has no name defined (#P{songPlayer.Key} header)");
                     }
+
+                    if (songPlayer.Key > songPlayers.Count)
+                    {
+                        result.Warnings.Add(
+                            $"Prefer using player indexes by ascending order. #P{songPlayer.Key} could be replaced by a lower player number value");
+                    }
                 }
 
-                if (song.NotManagedHeaders.Count > 0)
+                if (!string.IsNullOrEmpty(song.AudioUrl) && !Uri.IsWellFormedUriString(song.AudioUrl, UriKind.Absolute))
                 {
-                    result.Warnings.Add(
-                        $"There is {song.NotManagedHeaders.Count} unmanaged headers that should be removed");
+                    result.Warnings.Add("The #AUDIOURL header should be a valid URL according to RFC 1738");
+                }
+
+                if (!string.IsNullOrEmpty(song.VideoUrl) && !Uri.IsWellFormedUriString(song.VideoUrl, UriKind.Absolute))
+                {
+                    result.Warnings.Add("The #VIDEOURL header should be a valid URL according to RFC 1738");
+                }
+
+                if (!string.IsNullOrEmpty(song.CoverUrl) && !Uri.IsWellFormedUriString(song.CoverUrl, UriKind.Absolute))
+                {
+                    result.Warnings.Add("The #COVERURL header should be a valid URL according to RFC 1738");
+                }
+
+                if (!string.IsNullOrEmpty(song.BackgroundUrl) && !Uri.IsWellFormedUriString(song.BackgroundUrl, UriKind.Absolute))
+                {
+                    result.Warnings.Add("The #BACKGROUNDURL header should be a valid URL according to RFC 1738");
+                }
+
+                foreach (var invalidLanguage in song.Languages.Where(l => !LanguagesHelper.IsValidLanguage(l)))
+                {
+                    result.Warnings.Add($"The language {invalidLanguage} is not an ISO 639.2 english name language");
+                }
+
+                foreach (var notCapitalizedGenre in song.Genres.Where(g => g.Any(c => !char.IsUpper(c))))
+                {
+                    result.Warnings.Add($"The genre {notCapitalizedGenre} should be capitalized");
                 }
 
                 return result;
@@ -130,12 +165,7 @@ namespace KaraWeb.Shared.Helpers
                             $"There is a duplicated note on beat {note.StartBeat} for player {note.PlayerNumber}");
                     }
 
-                    if (note.Type == NoteType.Unknow)
-                    {
-                        result.Errors.Add(
-                            $"There is an unknown note type on beat {note.StartBeat} for player {note.PlayerNumber}");
-                    }
-                    else if (note.Type != NoteType.Eol)
+                    if (note.Type != NoteType.Eol)
                     {
                         if (!note.Duration.HasValue)
                         {
