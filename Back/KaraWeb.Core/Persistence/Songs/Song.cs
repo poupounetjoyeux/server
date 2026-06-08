@@ -45,8 +45,6 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public int? End { get; set; }
 
-        public bool IsRelative { get; set; }
-
         public virtual ICollection<SongPlayer> Players { get; set; } = new List<SongPlayer>();
 
         public Dictionary<int, string> GetPlayers()
@@ -128,9 +126,9 @@ namespace KaraWeb.Core.Persistence.Songs
 
         #endregion
 
-        public void AddAlert(AlertType type, string message)
+        public void AddAlert(AlertType type, string message, int? noteFileLine = null)
         {
-            Alerts.Add(new SongAlert { Type = type, Message = message });
+            Alerts.Add(new SongAlert { Type = type, Message = message, NoteFileLine = noteFileLine });
         }
 
         public string GetSongFilePath(FileType fileType)
@@ -190,7 +188,7 @@ namespace KaraWeb.Core.Persistence.Songs
                 HasVideo = !string.IsNullOrEmpty(Video),
                 HasVocals = !string.IsNullOrEmpty(Vocals),
                 HasInstrumental = !string.IsNullOrEmpty(Instrumental),
-                HasErrors = Alerts.Any(a => a.IsError) || Notes.Any(n => n.HasError),
+                HasErrors = Alerts.Any(a => a.IsError),
                 HasWarnings = Alerts.Any(a => a.IsWarning)
             };
             FeedBaseSongDto(songDto);

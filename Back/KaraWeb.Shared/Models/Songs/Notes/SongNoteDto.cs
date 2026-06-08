@@ -8,6 +8,11 @@ namespace KaraWeb.Shared.Models.Songs.Notes
     public sealed class SongNoteDto : IAnalyzableSongNote
     {
         /// <summary>
+        ///     The number of the line in the song file
+        /// </summary>
+        public int FileLine { get; set; }
+
+        /// <summary>
         ///     The note's type
         /// </summary>
         public NoteType Type { get; set; }
@@ -25,7 +30,7 @@ namespace KaraWeb.Shared.Models.Songs.Notes
         /// <summary>
         ///     The note's duration
         /// </summary>
-        public int? Duration { get; set; }
+        public int Duration { get; set; }
 
         /// <summary>
         ///     The note's pitch
@@ -36,10 +41,5 @@ namespace KaraWeb.Shared.Models.Songs.Notes
         ///     The note's text
         /// </summary>
         public string Text { get; set; }
-
-        /// <summary>
-        ///     The set of errors the note raised
-        /// </summary>
-        public List<string> Errors { get; set; }
     }
 }

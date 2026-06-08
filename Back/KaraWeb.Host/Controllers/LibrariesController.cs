@@ -56,7 +56,7 @@ namespace KaraWeb.Host.Controllers
                 return NotFound($"The library with ID {libraryId} doesn't exist");
             }
 
-            return Ok(library);
+            return Ok(library.ToDto());
         }
 
         /// <summary>
@@ -109,6 +109,7 @@ namespace KaraWeb.Host.Controllers
         /// <param name="cancellationToken"></param>
         [HttpPost("{libraryId}/do-start-analyze")]
         [SwaggerResponse(StatusCodes.Status202Accepted, "The created analyze job")]
+        [SwaggerResponse(StatusCodes.Status400BadRequest, "The given library is not ready to be analyzed", typeof(string))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "No library found with the given ID", typeof(string))]
         public async Task<IActionResult> StartLibraryAnalyzeAsync([FromRoute] Guid libraryId,
             [FromBody] LibraryAnalyzePayload payload, CancellationToken cancellationToken = default)
@@ -117,6 +118,11 @@ namespace KaraWeb.Host.Controllers
             if (library == null)
             {
                 return NotFound($"The library with ID {libraryId} doesn't exist");
+            }
+
+            if (library.IsAnalyzing)
+            {
+                return BadRequest($"The library with ID {libraryId} is already analyzing");
             }
 
             await _librariesProvider.StartLibraryAnalyzeAsync(library, payload.AnalyzeType, cancellationToken);

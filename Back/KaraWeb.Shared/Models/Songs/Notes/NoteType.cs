@@ -5,7 +5,7 @@
     /// </summary>
     public enum NoteType
     {
-        Eol,
+        EndOfPhrase,
         Regular,
         Golden,
         Rap,

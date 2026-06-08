@@ -5,7 +5,7 @@ namespace KaraWeb.Shared.Models.Libraries
     /// <summary>
     ///     A songs library pointing to a folder containing songs
     /// </summary>
-    public sealed class LibraryDto : IAnalyzableLibrary
+    public sealed class LibraryDto
     {
         /// <summary>
         ///     The library's ID
@@ -26,5 +26,15 @@ namespace KaraWeb.Shared.Models.Libraries
         ///     The library's path to directory
         /// </summary>
         public string Path { get; set; }
+
+        /// <summary>
+        ///     A flag indicating if the library is currently analyzing songs
+        /// </summary>
+        public bool IsAnalyzing { get; set; }
+
+        /// <summary>
+        ///     The last analyze message
+        /// </summary>
+        public string LastAnalyzeMessage { get; set; }
     }
 }

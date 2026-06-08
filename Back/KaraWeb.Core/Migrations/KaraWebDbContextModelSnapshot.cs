@@ -31,6 +31,12 @@ namespace KaraWeb.Core.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsAnalyzing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastAnalyzeMessage")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -105,9 +111,6 @@ namespace KaraWeb.Core.Migrations
 
                     b.Property<string>("Instrumental")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsRelative")
-                        .HasColumnType("INTEGER");
 
                     b.PrimitiveCollection<string>("Languages")
                         .HasColumnType("TEXT");
@@ -184,6 +187,9 @@ namespace KaraWeb.Core.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("NoteFileLine")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
 
@@ -199,24 +205,20 @@ namespace KaraWeb.Core.Migrations
 
             modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongNote", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Duration")
+                    b.Property<int>("FileLine")
                         .HasColumnType("INTEGER");
 
-                    b.PrimitiveCollection<string>("Errors")
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Duration")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("Pitch")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("PlayerNumber")
                         .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("StartBeat")
                         .HasColumnType("INTEGER");
@@ -227,9 +229,9 @@ namespace KaraWeb.Core.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Id");
+                    b.HasKey("SongId", "FileLine");
 
-                    b.HasIndex("SongId");
+                    b.HasIndex("PlayerNumber");
 
                     b.ToTable("SongNotes");
                 });

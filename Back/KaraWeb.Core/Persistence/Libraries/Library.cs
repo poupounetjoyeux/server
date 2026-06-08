@@ -6,7 +6,7 @@ using KaraWeb.Shared.Models.Libraries;
 namespace KaraWeb.Core.Persistence.Libraries
 {
     [Table("Libraries")]
-    public class Library : IAnalyzableLibrary
+    public class Library
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -21,6 +21,11 @@ namespace KaraWeb.Core.Persistence.Libraries
         [Required]
         public string Path { get; set; }
 
+        [Required]
+        public bool IsAnalyzing { get; set; }
+
+        public string LastAnalyzeMessage { get; set; }
+
         public LibraryDto ToDto()
         {
             return new LibraryDto
@@ -28,7 +33,9 @@ namespace KaraWeb.Core.Persistence.Libraries
                 Id = Id,
                 Name = Name,
                 Description = Description,
-                Path = Path
+                Path = Path,
+                IsAnalyzing = IsAnalyzing,
+                LastAnalyzeMessage = LastAnalyzeMessage
             };
         }
     }

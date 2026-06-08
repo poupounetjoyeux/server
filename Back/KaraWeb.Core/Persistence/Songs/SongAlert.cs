@@ -24,18 +24,21 @@ namespace KaraWeb.Core.Persistence.Songs
         [Required]
         public string Message { get; set; }
 
-        [NotMapped]
-        public bool IsError => Type is AlertType.ParsingError or AlertType.ValidationError or AlertType.MissingFile;
+        public int? NoteFileLine { get; set; }
 
         [NotMapped]
-        public bool IsWarning => Type is AlertType.ParsingWarning or AlertType.ValidationWarning;
+        public bool IsError => Type is AlertType.ParsingError or AlertType.HeaderError or AlertType.NoteError or AlertType.MissingFile;
+
+        [NotMapped]
+        public bool IsWarning => Type is AlertType.ParsingWarning or AlertType.HeaderWarning;
 
         public SongAlertDto ToDto()
         {
             return new SongAlertDto
             {
                 Type = Type,
-                Message = Message
+                Message = Message,
+                NoteFileLine = NoteFileLine
             };
         }
     }

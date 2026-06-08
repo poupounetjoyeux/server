@@ -1,26 +1,32 @@
-﻿using System;
+﻿using KaraWeb.Core.Jobs;
+using KaraWeb.Core.Persistence;
+using KaraWeb.Core.Persistence.Libraries;
+using KaraWeb.Core.Services.SchedulerService;
+using KaraWeb.Core.Services.SongParser;
+using KaraWeb.Shared.Models.Libraries;
+using Microsoft.EntityFrameworkCore;
+using Quartz;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Core.Persistence;
-using KaraWeb.Core.Persistence.Libraries;
-using KaraWeb.Core.Services.LibrariesAnalyzer;
-using KaraWeb.Shared.Models.Libraries;
-using Microsoft.EntityFrameworkCore;
 
 namespace KaraWeb.Host.Providers.Libraries
 {
     internal sealed class LibrariesProvider : ILibrariesProvider
     {
         private readonly KaraWebDbContext _dbContext;
-        private readonly ILibrariesAnalyzerService _librariesAnalyzerService;
+        private readonly ISongParserService _songParserService;
+        private readonly ISchedulerService _schedulerService;
 
-        public LibrariesProvider(KaraWebDbContext dbContext, ILibrariesAnalyzerService librariesAnalyzerService)
+        public LibrariesProvider(KaraWebDbContext dbContext,
+            ISongParserService songParserService, ISchedulerService schedulerService)
         {
             _dbContext = dbContext;
-            _librariesAnalyzerService = librariesAnalyzerService;
+            _songParserService = songParserService;
+            _schedulerService = schedulerService;
         }
 
         public async IAsyncEnumerable<LibraryDto> GetLibrariesAsync(
@@ -33,9 +39,9 @@ namespace KaraWeb.Host.Providers.Libraries
             }
         }
 
-        public async Task<LibraryDto> GetLibraryAsync(Guid libraryId, CancellationToken cancellationToken)
+        public Task<Library> GetLibraryAsync(Guid libraryId, CancellationToken cancellationToken)
         {
-            return (await _dbContext.Libraries.SingleOrDefaultAsync(c => c.Id == libraryId, cancellationToken)).ToDto();
+            return _dbContext.Libraries.SingleOrDefaultAsync(c => c.Id == libraryId, cancellationToken);
         }
 
         public async Task<LibraryDto> CreateLibraryAsync(LibraryCreationPayload payload,
@@ -52,12 +58,6 @@ namespace KaraWeb.Host.Providers.Libraries
             return libraryEntry.Entity.ToDto();
         }
 
-        public Task StartLibraryAnalyzeAsync(IAnalyzableLibrary library, LibraryAnalyzeType libraryAnalyzeType,
-            CancellationToken cancellationToken)
-        {
-            return _librariesAnalyzerService.StartLibraryAnalyzeAsync(library, libraryAnalyzeType, cancellationToken);
-        }
-
         public async Task<bool> DeleteLibraryAsync(Guid libraryId, CancellationToken cancellationToken)
         {
             var deleteCount = await _dbContext.Songs.Where(s => s.LibraryId == libraryId)
@@ -66,6 +66,18 @@ namespace KaraWeb.Host.Providers.Libraries
                 .ExecuteDeleteAsync(cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return deleteCount > 0;
+        }
+
+        public Task StartLibraryAnalyzeAsync(Library library, LibraryAnalyzeType analyzeType,
+            CancellationToken cancellationToken)
+        {
+            var dataMap = new JobDataMap
+            {
+                [AnalyzeLibraryJob.LibraryKey] = library,
+                [AnalyzeLibraryJob.AnalyzeTypeKey] = analyzeType,
+                [AnalyzeLibraryJob.SongParserServiceKey] = _songParserService
+            };
+            return _schedulerService.StartJob(AnalyzeLibraryJob.JobKey, dataMap, cancellationToken);
         }
     }
 }

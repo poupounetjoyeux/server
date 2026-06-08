@@ -1,10 +1,10 @@
 ﻿using KaraWeb.Core.Persistence;
 using KaraWeb.Core.Persistence.Songs;
-using KaraWeb.Core.Services.SongParser;
 using KaraWeb.Shared.Helpers;
 using KaraWeb.Shared.Models.Libraries;
+using KaraWeb.Shared.Models.Songs.Files;
 using log4net;
-using Microsoft.EntityFrameworkCore;
+using Quartz;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,25 +14,53 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Shared.Models.Songs.Files;
+using KaraWeb.Core.Persistence.Libraries;
+using KaraWeb.Core.Services.SongParser;
 using KaraWeb.Shared.Models.Songs.Messages;
+using Microsoft.EntityFrameworkCore;
 
-namespace KaraWeb.Core.Services.LibrariesAnalyzer
+namespace KaraWeb.Core.Jobs
 {
-    public sealed class LibrariesAnalyzerService : ILibrariesAnalyzerService
+    public sealed class AnalyzeLibraryJob : IJob
     {
-        private readonly ILog _logger = LogManager.GetLogger(nameof(LibrariesAnalyzerService));
-        private readonly ISongParserService _songParserService;
+        public static readonly JobKey JobKey = new(nameof(AnalyzeLibraryJob), KaraWebConstants.Name);
+        private readonly ILog _logger = LogManager.GetLogger(JobKey.Name);
 
-        public LibrariesAnalyzerService(ISongParserService songParserService)
-        {
-            _songParserService = songParserService;
-        }
+        public const string LibraryKey = "library";
+        public const string AnalyzeTypeKey = "analyze_type";
+        public const string SongParserServiceKey = "song_parser_service";
 
-        public async Task StartLibraryAnalyzeAsync(IAnalyzableLibrary library, LibraryAnalyzeType analyzeType,
-            CancellationToken cancellationToken)
+        public async Task Execute(IJobExecutionContext context)
         {
-            // TODO: Make it background
+            if (context.MergedJobDataMap[LibraryKey] is not Library library)
+            {
+                _logger.Error("Unable to retrieve a valid library from job context");
+                return;
+            }
+
+            if (context.MergedJobDataMap[AnalyzeTypeKey] is not LibraryAnalyzeType analyzeType)
+            {
+                _logger.Error("Unable to retrieve a valid analyze type from job context");
+                return;
+            }
+
+            if (context.MergedJobDataMap[SongParserServiceKey] is not ISongParserService songParserService)
+            {
+                _logger.Error("Unable to retrieve a valid song parser service from job context");
+                return;
+            }
+
+            await using var dbContext = new KaraWebDbContext();
+            library = dbContext.Attach(library).Entity;
+            if (library.IsAnalyzing)
+            {
+                _logger.Warn($"Library with ID {library.Id} is already analyzing.. Aborting..");
+                return;
+            }
+            library.IsAnalyzing = true;
+            library.LastAnalyzeMessage = null;
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+
             var directory = new DirectoryInfo(library.Path);
             if (!directory.Exists)
             {
@@ -47,21 +75,25 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
             var foundFiles = directory.GetFiles("*.txt", SearchOption.AllDirectories);
             _logger.Info($"Found {foundFiles.Length} potential song file(s) to analyze");
             var parsedSongIds = new ConcurrentBag<Guid>();
-            await Parallel.ForEachAsync(foundFiles, cancellationToken,
-                (f, c) => ProcessSongFile(library.Id, analyzeType, parsedSongIds, f, c));
-
-            await using var dbContext = new KaraWebDbContext();
+            await Parallel.ForEachAsync(foundFiles, context.CancellationToken,
+                (f, c) => ProcessSongFile(songParserService, library.Id, analyzeType, parsedSongIds, f, c));
             var songsToDelete =
-                await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id)).ToListAsync(cancellationToken);
+                await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id))
+                    .ToListAsync(context.CancellationToken);
             if (songsToDelete.Count > 0)
             {
                 dbContext.RemoveRange(songsToDelete);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(context.CancellationToken);
             }
 
             timeWatcher.Stop();
-            _logger.Info(
-                $"Library {library.Name} analyzed {parsedSongIds.Count} song(s) and deleted {songsToDelete.Count} song(s) successfully in {timeWatcher.Elapsed}");
+
+            library.IsAnalyzing = false;
+            library.LastAnalyzeMessage =
+                $"Library {library.Name} analyzed {parsedSongIds.Count} song(s) and deleted {songsToDelete.Count} song(s) successfully in {timeWatcher.Elapsed}";
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+
+            _logger.Info(library.LastAnalyzeMessage);
         }
 
         private static async Task<string> ComputeFileHash(FileInfo file, CancellationToken cancellationToken)
@@ -71,7 +103,7 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
             return Convert.ToHexStringLower(hashBytes);
         }
 
-        private async ValueTask ProcessSongFile(Guid libraryId, LibraryAnalyzeType analyzeType,
+        private async ValueTask ProcessSongFile(ISongParserService songParserService, Guid libraryId, LibraryAnalyzeType analyzeType,
             ConcurrentBag<Guid> parsedSongIds, FileInfo songFile, CancellationToken cancellationToken)
         {
             try
@@ -110,7 +142,7 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
                         isNew = true;
                     }
 
-                    if (!await _songParserService.ParseSongAsync(songFile, song, cancellationToken))
+                    if (!await songParserService.ParseSongAsync(songFile, song, cancellationToken))
                     {
                         _logger.Error($"Unable to parse data from '{songFile.FullName}'.. Ignoring it..");
                         return;
@@ -120,20 +152,20 @@ namespace KaraWeb.Core.Services.LibrariesAnalyzer
                     {
                         await dbContext.Songs.AddAsync(song, cancellationToken);
                     }
+
+                    _logger.Info($"Checking errors on song '{songFile.FullName}'");
+
+                    var analyzeResult = await SongValidationHelper.CheckFullSong(song, song.Notes, cancellationToken);
+                    analyzeResult.HeadersErrors.ForEach(e => song.AddAlert(e.IsWarning ? AlertType.HeaderWarning : AlertType.HeaderError, e.Message));
+                    analyzeResult.NotesErrors.ForEach(e => song.AddAlert(AlertType.NoteError, e.Message, e.FileLine));
                 }
                 else
                 {
-                    foreach (var songAlert in song.Alerts.Where(a => a.Type != AlertType.ParsingError && a.Type != AlertType.ParsingWarning).ToList())
+                    foreach (var songAlert in song.Alerts.Where(a => a.Type == AlertType.MissingFile).ToList())
                     {
                         song.Alerts.Remove(songAlert);
                     }
                 }
-
-                _logger.Info($"Checking errors on song '{songFile.FullName}'");
-
-                var errorsResult = await SongHelper.CheckFullSong(song, song.Notes, cancellationToken);
-                errorsResult.Errors.ForEach(e => song.AddAlert(AlertType.ValidationError, e));
-                errorsResult.Warnings.ForEach(w => song.AddAlert(AlertType.ValidationWarning, w));
 
                 var missingFilesErrors = await CheckSongFilesExistence(song, cancellationToken);
                 missingFilesErrors.ForEach(m => song.AddAlert(AlertType.MissingFile, m));

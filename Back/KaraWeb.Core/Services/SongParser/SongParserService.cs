@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Core.Persistence.Songs;
+using KaraWeb.Shared.Exceptions;
 using KaraWeb.Shared.Helpers;
 using KaraWeb.Shared.Models.Songs.Messages;
 using KaraWeb.Shared.Models.Songs.Notes;
@@ -62,7 +63,7 @@ namespace KaraWeb.Core.Services.SongParser
 
             FileStream fileStream = null;
             StreamReader reader = null;
-
+            SongNote lastParsedNote = null;
             try
             {
                 fileStream = new FileStream(
@@ -116,21 +117,24 @@ namespace KaraWeb.Core.Services.SongParser
                         allHeadersParsed = true;
                     }
 
-                    if (TryParseNote(song, line, currentPlayer))
+                    var newNote = TryParseEndOfPhraseNote(lastParsedNote, line, currentPlayer, currentLine) ??
+                                  TryParseNote(line, currentPlayer, currentLine);
+                    if (newNote != null)
                     {
+                        lastParsedNote = newNote;
+                        song.Notes.Add(newNote);
                         continue;
                     }
 
                     var playerMatch = PlayerRegex.Match(line);
-                    if (playerMatch.Success && int.TryParse(playerMatch.Groups["playerNumber"].Value,
-                            CultureInfo.InvariantCulture,
-                            out var playerNumber))
+                    if (playerMatch.Success)
                     {
-                        currentPlayer = playerNumber;
+                        currentPlayer = int.Parse(playerMatch.Groups["playerNumber"].Value);
+                        lastParsedNote = song.Notes.Where(n => n.PlayerNumber == currentPlayer).MaxBy(n => n.FileLine);
                         continue;
                     }
 
-                    song.AddAlert(AlertType.ParsingError, $"The line {currentLine} doesn't respect the required format");
+                    song.AddAlert(AlertType.ParsingError, $"The line {currentLine} cannot be parsed");
                 }
 
                 if (!eofMarkerFound)
@@ -168,7 +172,6 @@ namespace KaraWeb.Core.Services.SongParser
             song.Gap = null;
             song.Start = null;
             song.End = null;
-            song.IsRelative = false;
             song.Players.Clear();
 
             song.Cover = null;
@@ -232,9 +235,9 @@ namespace KaraWeb.Core.Services.SongParser
             var headerName = headerLineMatch.Groups["headerName"].Value.ToUpperInvariant();
             var headerValue = headerLineMatch.Groups["headerValue"].Value;
 
-            if (headerValue.Length > SongHelper.MaxRecommendedHeaderSize)
+            if (headerValue.Length > SongValidationHelper.MaxRecommendedHeaderSize)
             {
-                song.AddAlert(AlertType.ParsingWarning, $"The header #{headerName} has a value greater than {SongHelper.MaxRecommendedHeaderSize} bytes");
+                song.AddAlert(AlertType.ParsingWarning, $"The header #{headerName} has a value greater than {SongValidationHelper.MaxRecommendedHeaderSize} bytes");
             }
 
             if (HandleCoreHeaders(headerName, headerValue, song, out var fixedHeaderName) ||
@@ -332,9 +335,12 @@ namespace KaraWeb.Core.Services.SongParser
                 case "RELATIVE":
                     if (headerValue.Equals("YES", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        song.IsRelative = true;
-                        song.AddAlert(AlertType.ParsingWarning, "Relative mode is no more used in recent format version. Please avoid it since files order is less permissive");
+                        throw new KaraWebException($"Relative mode is no more used in recent format versions.{Environment.NewLine}" +
+                                                   $"Please avoid it since files order is less permissive and this program don't aim to support it.{Environment.NewLine}" +
+                                                   $"You can always convert your old relative file by using UltraStar Deluxe song editor or UltraStar manager");
                     }
+
+                    song.AddAlert(AlertType.ParsingWarning, "The #RELATIVE header is not enabled and can be removed");
                     break;
 
                 default:
@@ -365,8 +371,15 @@ namespace KaraWeb.Core.Services.SongParser
                     song.Vocals = headerValue;
                     break;
 
+                case "INSTRUMENTALS":
                 case "INSTRUMENTAL":
                     song.Instrumental = headerValue;
+                    if (headerName == "INSTRUMENTALS")
+                    {
+                        song.AddAlert(AlertType.ParsingWarning,
+                            "#INSTRUMENTALS header doesn't takes a terminal 'S' in specifications");
+                        fixedHeaderName = "INSTRUMENTAL";
+                    }
                     break;
 
                 case "VIDEOGAP":
@@ -556,31 +569,52 @@ namespace KaraWeb.Core.Services.SongParser
 
         #region Notes
 
-        private static bool TryParseNote(Song song, string fileLine, int playerNumber)
+        private static SongNote TryParseEndOfPhraseNote(SongNote lastParsedNote, string fileLine, int playerNumber, int currentLine)
         {
-            var noteMatch = NoteRegex.Match(fileLine);
-            if (!noteMatch.Success)
+            var eolMatch = EolRegex.Match(fileLine);
+            if (!eolMatch.Success)
             {
-                return TryParseEolNote(song, fileLine, playerNumber);
+                return null;
             }
 
             var note = new SongNote
             {
+                FileLine = currentLine,
+                PlayerNumber = playerNumber,
+                Type = NoteType.EndOfPhrase,
+                StartBeat = -1,
+                Duration = 1
+            };
+
+            if (eolMatch.Groups["startBeat"].Success)
+            {
+                note.StartBeat = int.Parse(eolMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture);
+            } 
+            else if (lastParsedNote != null)
+            {
+                note.StartBeat = lastParsedNote.StartBeat + lastParsedNote.Duration - 1;
+            }
+            return note;
+        }
+
+        private static SongNote TryParseNote(string fileLine, int playerNumber, int currentLine)
+        {
+            var noteMatch = NoteRegex.Match(fileLine);
+            if (!noteMatch.Success)
+            {
+                return null;
+            }
+
+            return new SongNote
+            {
+                FileLine = currentLine,
                 PlayerNumber = playerNumber,
                 Type = ParseNoteType(noteMatch.Groups["noteType"].Value),
                 StartBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture),
-                Duration = int.TryParse(noteMatch.Groups["duration"].Value, CultureInfo.InvariantCulture,
-                    out var duration)
-                    ? duration
-                    : null,
-                Pitch = int.TryParse(noteMatch.Groups["pitch"].Value, CultureInfo.InvariantCulture,
-                    out var pitch)
-                    ? pitch
-                    : null,
+                Duration = int.Parse(noteMatch.Groups["duration"].Value),
+                Pitch = int.Parse(noteMatch.Groups["pitch"].Value),
                 Text = noteMatch.Groups["text"].Value
             };
-            song.Notes.Add(note);
-            return true;
         }
 
         private static NoteType ParseNoteType(string noteType)
@@ -593,41 +627,6 @@ namespace KaraWeb.Core.Services.SongParser
                 "G" => NoteType.GoldenRap,
                 _ => NoteType.Freestyle
             };
-        }
-
-        private static bool TryParseEolNote(Song song, string fileLine, int playerNumber)
-        {
-            var eolMatch = EolRegex.Match(fileLine);
-            if (!eolMatch.Success)
-            {
-                return false;
-            }
-
-            var note = new SongNote
-            {
-                PlayerNumber = playerNumber,
-                Type = NoteType.Eol
-            };
-
-            if (eolMatch.Groups["startBeat"].Success)
-            {
-                note.StartBeat = int.Parse(eolMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                var lastNote = song.Notes.Where(n => n.PlayerNumber == playerNumber && n.Type != NoteType.Eol).MaxBy(n => n.StartBeat);
-                if (lastNote?.Duration != null)
-                {
-                    note.StartBeat = lastNote.StartBeat + lastNote.Duration.Value;
-                }
-                else
-                {
-                    note.Errors.Add("Unable to compute the start beat");
-                }
-            }
-
-            song.Notes.Add(note);
-            return true;
         }
 
         #endregion

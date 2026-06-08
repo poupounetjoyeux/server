@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KaraWeb.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class InitializeDatabase : Migration
+    public partial class InitilizeDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,7 +18,9 @@ namespace KaraWeb.Core.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    Path = table.Column<string>(type: "TEXT", nullable: false)
+                    Path = table.Column<string>(type: "TEXT", nullable: false),
+                    IsAnalyzing = table.Column<bool>(type: "INTEGER", nullable: false),
+                    LastAnalyzeMessage = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -39,7 +41,6 @@ namespace KaraWeb.Core.Migrations
                     Gap = table.Column<int>(type: "INTEGER", nullable: true),
                     Start = table.Column<int>(type: "INTEGER", nullable: true),
                     End = table.Column<int>(type: "INTEGER", nullable: true),
-                    IsRelative = table.Column<bool>(type: "INTEGER", nullable: false),
                     Cover = table.Column<string>(type: "TEXT", nullable: true),
                     Background = table.Column<string>(type: "TEXT", nullable: true),
                     Video = table.Column<string>(type: "TEXT", nullable: true),
@@ -85,7 +86,8 @@ namespace KaraWeb.Core.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    Message = table.Column<string>(type: "TEXT", nullable: false)
+                    Message = table.Column<string>(type: "TEXT", nullable: false),
+                    NoteFileLine = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -102,19 +104,18 @@ namespace KaraWeb.Core.Migrations
                 name: "SongNotes",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    FileLine = table.Column<int>(type: "INTEGER", nullable: false),
                     SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
                     PlayerNumber = table.Column<int>(type: "INTEGER", nullable: false),
                     StartBeat = table.Column<int>(type: "INTEGER", nullable: false),
-                    Duration = table.Column<int>(type: "INTEGER", nullable: true),
+                    Duration = table.Column<int>(type: "INTEGER", nullable: false),
                     Pitch = table.Column<int>(type: "INTEGER", nullable: true),
-                    Text = table.Column<string>(type: "TEXT", nullable: true),
-                    Errors = table.Column<string>(type: "TEXT", nullable: true)
+                    Text = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SongNotes", x => x.Id);
+                    table.PrimaryKey("PK_SongNotes", x => new { x.SongId, x.FileLine });
                     table.ForeignKey(
                         name: "FK_SongNotes_Songs_SongId",
                         column: x => x.SongId,
@@ -148,9 +149,9 @@ namespace KaraWeb.Core.Migrations
                 column: "SongId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SongNotes_SongId",
+                name: "IX_SongNotes_PlayerNumber",
                 table: "SongNotes",
-                column: "SongId");
+                column: "PlayerNumber");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Songs_LibraryId",

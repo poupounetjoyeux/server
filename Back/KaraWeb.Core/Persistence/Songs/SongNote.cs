@@ -9,12 +9,11 @@ using Microsoft.EntityFrameworkCore;
 namespace KaraWeb.Core.Persistence.Songs
 {
     [Table("SongNotes")]
-    [Index(nameof(SongId))]
+    [PrimaryKey(nameof(SongId), nameof(FileLine))]
+    [Index(nameof(PlayerNumber))]
     public class SongNote : IAnalyzableSongNote
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public Guid Id { get; set; }
+        public int FileLine { get; set; }
 
         public Guid SongId { get; set; }
         [ForeignKey(nameof(SongId))]
@@ -29,28 +28,24 @@ namespace KaraWeb.Core.Persistence.Songs
         [Required]
         public int StartBeat { get; set; }
 
-        public int? Duration { get; set; }
+        [Required]
+        public int Duration { get; set; }
 
         public int? Pitch { get; set; }
 
         public string Text { get; set; }
 
-        public List<string> Errors { get; set; } = new();
-
-        [NotMapped]
-        public bool HasError => Errors.Count > 0;
-
         public SongNoteDto ToDto()
         {
             return new SongNoteDto
             {
+                FileLine = FileLine,
                 Type = Type,
                 PlayerNumber = PlayerNumber,
                 StartBeat = StartBeat,
                 Duration = Duration,
                 Pitch = Pitch,
-                Text = Text,
-                Errors = Errors.ToList()
+                Text = Text
             };
         }
     }

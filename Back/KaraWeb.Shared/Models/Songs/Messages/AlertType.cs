@@ -4,8 +4,9 @@
     {
         ParsingError,
         ParsingWarning,
-        ValidationError,
-        ValidationWarning,
+        HeaderError,
+        HeaderWarning,
+        NoteError,
         MissingFile
     }
 }

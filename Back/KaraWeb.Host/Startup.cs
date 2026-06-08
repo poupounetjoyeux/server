@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using KaraWeb.Core.Persistence;
-using KaraWeb.Core.Services.LibrariesAnalyzer;
+﻿using KaraWeb.Core.Persistence;
+using KaraWeb.Core.Services.SchedulerService;
 using KaraWeb.Core.Services.SongParser;
 using KaraWeb.Host.Conventions;
 using KaraWeb.Host.Helpers;
@@ -17,6 +11,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace KaraWeb.Host
 {
@@ -29,6 +29,7 @@ namespace KaraWeb.Host
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.WriteIndented = true;
                 options.JsonSerializerOptions.AllowTrailingCommas = true;
+                options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
@@ -60,8 +61,9 @@ namespace KaraWeb.Host
         private static void RegisterServices(IServiceCollection services)
         {
             services
-                .AddSingleton<ILibrariesAnalyzerService, LibrariesAnalyzerService>()
-                .AddSingleton<ISongParserService, SongParserService>();
+                .AddSingleton<ISongParserService, SongParserService>()
+                .AddSingleton<ISchedulerService, SchedulerService>()
+                .AddHostedService(s => s.GetService<ISchedulerService>());
         }
 
         private static void RegisterProviders(IServiceCollection services)
