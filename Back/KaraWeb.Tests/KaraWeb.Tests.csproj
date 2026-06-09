@@ -3,6 +3,7 @@
 		<OutputType>Library</OutputType>
 		<RootNamespace>KaraWeb.Tests</RootNamespace>
 		<AssemblyName>KaraWeb.Tests</AssemblyName>
+		<OutputPath>..\..\bin\Tests</OutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>

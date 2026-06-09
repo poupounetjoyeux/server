@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using KaraWeb.Shared;
 
 namespace KaraWeb.Host.Providers.Libraries
 {
@@ -20,13 +21,15 @@ namespace KaraWeb.Host.Providers.Libraries
         private readonly KaraWebDbContext _dbContext;
         private readonly ISongParserService _songParserService;
         private readonly ISchedulerService _schedulerService;
+        private readonly IFileHelper _fileHelper;
 
         public LibrariesProvider(KaraWebDbContext dbContext,
-            ISongParserService songParserService, ISchedulerService schedulerService)
+            ISongParserService songParserService, ISchedulerService schedulerService, IFileHelper fileHelper)
         {
             _dbContext = dbContext;
             _songParserService = songParserService;
             _schedulerService = schedulerService;
+            _fileHelper = fileHelper;
         }
 
         public async IAsyncEnumerable<LibraryDto> GetLibrariesAsync(
@@ -75,7 +78,8 @@ namespace KaraWeb.Host.Providers.Libraries
             {
                 [AnalyzeLibraryJob.LibraryKey] = library,
                 [AnalyzeLibraryJob.AnalyzeTypeKey] = analyzeType,
-                [AnalyzeLibraryJob.SongParserServiceKey] = _songParserService
+                [AnalyzeLibraryJob.SongParserServiceKey] = _songParserService,
+                [AnalyzeLibraryJob.FileHelperKey] = _fileHelper
             };
             return _schedulerService.StartJob(AnalyzeLibraryJob.JobKey, dataMap, cancellationToken);
         }

@@ -30,10 +30,10 @@ namespace KaraWeb.SDK.Connectors.Collections
             if (!response.IsSuccessStatusCode)
             {
                 throw new KaraWebException(
-                    $"Unable to get libraries: {await response.Content.ReadAsStringAsync(cancellationToken)}");
+                    $"Unable to get libraries: {await response.Content.ReadAsStringAsync()}");
             }
 
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var responseStream = await response.Content.ReadAsStreamAsync();
             var libraries = JsonSerializer.DeserializeAsyncEnumerable<LibraryDto>(
                 responseStream, JsonHelper.DefaultJsonSerializerOptions, cancellationToken);
             await foreach (var library in libraries)
@@ -48,24 +48,29 @@ namespace KaraWeb.SDK.Connectors.Collections
             if (!response.IsSuccessStatusCode)
             {
                 throw new KaraWebException(
-                    $"Unable to get library: {await response.Content.ReadAsStringAsync(cancellationToken)}");
+                    $"Unable to get library: {await response.Content.ReadAsStringAsync()}");
             }
 
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var responseStream = await response.Content.ReadAsStreamAsync();
             return await JsonSerializer.DeserializeAsync<LibraryDto>(
                 responseStream, JsonHelper.DefaultJsonSerializerOptions, cancellationToken);
         }
 
-        public async IAsyncEnumerable<SongDto> GetSongsAsync(Guid libraryId, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<SongDto> GetSongsAsync(Guid libraryId, bool withErrors, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var response = await _httpClient.GetAsync(_baseUri.AppendPath($"{libraryId}/songs"), cancellationToken);
+            var uriBuilder = new UriBuilder(_baseUri.AppendPath($"{libraryId}/songs"))
+            {
+                Query = $"withErrors={withErrors}"
+            };
+
+            var response = await _httpClient.GetAsync(uriBuilder.Uri, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 throw new KaraWebException(
-                    $"Unable to get songs for library: {await response.Content.ReadAsStringAsync(cancellationToken)}");
+                    $"Unable to get songs for library: {await response.Content.ReadAsStringAsync()}");
             }
 
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var responseStream = await response.Content.ReadAsStreamAsync();
             var songs = JsonSerializer.DeserializeAsyncEnumerable<SongDto>(
                 responseStream, JsonHelper.DefaultJsonSerializerOptions, cancellationToken);
             await foreach (var song in songs)

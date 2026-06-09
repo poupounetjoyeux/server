@@ -153,7 +153,7 @@ namespace KaraWeb.Core.Services.SongParser
             }
             finally
             {
-                reader?.Dispose();
+                reader.Dispose();
                 if (fileStream != null)
                 {
                     await fileStream.DisposeAsync();
@@ -278,13 +278,13 @@ namespace KaraWeb.Core.Services.SongParser
                     break;
 
                 case "BPM":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var bpm))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var bpm))
                     {
                         song.Bpm = bpm;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an float", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an decimal", currentLine);
                     }
                     break;
 
@@ -308,35 +308,35 @@ namespace KaraWeb.Core.Services.SongParser
                     break;
 
                 case "GAP":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var gap))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var gap))
                     {
                         song.Gap = gap;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds float or ms integer", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
                     }
                     break;
 
                 case "START":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var start))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var start))
                     {
                         song.Start = start;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds float or ms integer", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
                     }
                     break;
 
                 case "END":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var end))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var end))
                     {
                         song.End = end;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds float or ms integer", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
                     }
                     break;
 
@@ -391,25 +391,25 @@ namespace KaraWeb.Core.Services.SongParser
                     break;
 
                 case "VIDEOGAP":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var videoGap))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var videoGap))
                     {
                         song.VideoGap = videoGap;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds float or ms integer", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
                     }
                     break;
 
                 case "PREVIEW":
                 case "PREVIEWSTART":
-                    if (double.TryParse(headerValue, CultureInfo.InvariantCulture, out var previewStart))
+                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var previewStart))
                     {
                         song.PreviewStart = previewStart;
                     }
                     else
                     {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds float or ms integer", currentLine);
+                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
                     }
 
                     if (headerName == "PREVIEW")

@@ -15,6 +15,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using KaraWeb.Core;
+using KaraWeb.Shared;
 
 namespace KaraWeb.Host
 {
@@ -54,6 +56,7 @@ namespace KaraWeb.Host
             services
                 .AddSingleton<ISongParserService, SongParserService>()
                 .AddSingleton<ISchedulerService, SchedulerService>()
+                .AddSingleton<IFileHelper, KaraWebFileHelper>()
                 .AddHostedService(s => s.GetService<ISchedulerService>());
         }
 

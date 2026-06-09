@@ -8,10 +8,10 @@ public class SongPlayerDto
     /// <summary>
     /// The player's number
     /// </summary>
-    public int PlayerNumber { get; init; }
+    public int PlayerNumber { get; set; }
 
     /// <summary>
     /// The player's name
     /// </summary>
-    public string Name { get; init; }
+    public string Name { get; set; }
 }

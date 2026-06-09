@@ -3,8 +3,6 @@ using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Notes;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,19 +18,18 @@ namespace KaraWeb.Shared.Helpers
     {
         public const int MaxRecommendedHeaderSize = 2048;
 
-        public static async Task<FullAnalyzeResult> CheckFullSongErrorsAsync(IAnalyzableSong song,
+        public static async Task<FullAnalyzeResult> CheckFullSongErrorsAsync(IFileHelper fileHelper, IAnalyzableSong song,
             IEnumerable<IAnalyzableSongNote> notes, CancellationToken cancellationToken)
         {
-            return new FullAnalyzeResult
-            {
-                HeadersErrors = await CheckHeadersErrorsAsync(song, cancellationToken),
-                NotesErrors = await CheckNotesErrorsAsync(song, notes, cancellationToken)
-            };
+            var result = new FullAnalyzeResult();
+            result.HeadersErrors.AddRange(await CheckHeadersErrorsAsync(fileHelper, song, cancellationToken));
+            result.NotesErrors.AddRange(await CheckNotesErrorsAsync(song, notes, cancellationToken));
+            return result;
         }
 
         #region Headers
 
-        public static Task<List<HeaderAnalyzeError>> CheckHeadersErrorsAsync(IAnalyzableSong song,
+        public static Task<List<HeaderAnalyzeError>> CheckHeadersErrorsAsync(IFileHelper fileHelper, IAnalyzableSong song,
             CancellationToken cancellationToken)
         {
             return Task.Run(() =>
@@ -50,7 +47,7 @@ namespace KaraWeb.Shared.Helpers
                 }
 
                 errors.AddRange(CheckMandatoryHeaders(song));
-                errors.AddRange(CheckPathHeaders(song));
+                errors.AddRange(CheckPathHeaders(fileHelper, song));
 
                 if (CheckBpmHeader(song.Bpm) is { } bpmError)
                 {
@@ -89,7 +86,7 @@ namespace KaraWeb.Shared.Helpers
             }
 
             var versionParts = version.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            if (versionParts.Length != 3 || versionParts.Any(p => !int.TryParse(p, CultureInfo.InvariantCulture, out _)))
+            if (versionParts.Length != 3 || versionParts.Any(p => !int.TryParse(p, out _)))
             {
                 return new HeaderAnalyzeError("The #VERSION header format is incorrect must be X.Y.Z");
             }
@@ -97,7 +94,7 @@ namespace KaraWeb.Shared.Helpers
             return null;
         }
 
-        public static HeaderAnalyzeError CheckBpmHeader(double? bpm)
+        public static HeaderAnalyzeError CheckBpmHeader(decimal? bpm)
         {
             return bpm switch
             {
@@ -134,9 +131,9 @@ namespace KaraWeb.Shared.Helpers
                 { "ARTIST", song.Artist }
             };
 
-            foreach (var (headerName, value) in mandatoryHeadersToCheck)
+            foreach (var mandatoryHeader in mandatoryHeadersToCheck)
             {
-                var error = CheckMandatoryHeader(headerName, value);
+                var error = CheckMandatoryHeader(mandatoryHeader.Key, mandatoryHeader.Value);
                 if (error != null)
                 {
                     yield return error;
@@ -155,7 +152,7 @@ namespace KaraWeb.Shared.Helpers
             return null;
         }
 
-        public static IEnumerable<HeaderAnalyzeError> CheckPathHeaders(IAnalyzableSong song)
+        public static IEnumerable<HeaderAnalyzeError> CheckPathHeaders(IFileHelper fileHelper, IAnalyzableSong song)
         {
             var pathHeadersToCheck = new Dictionary<string, string>
             {
@@ -167,9 +164,9 @@ namespace KaraWeb.Shared.Helpers
                 { "INSTRUMENTAL", song.Instrumental },
             };
 
-            foreach (var (headerName, path) in pathHeadersToCheck)
+            foreach (var pathHeader in pathHeadersToCheck)
             {
-                var error = CheckPathHeader(headerName, path);
+                var error = CheckPathHeader(fileHelper, pathHeader.Key, pathHeader.Value);
                 if (error != null)
                 {
                     yield return error;
@@ -177,9 +174,9 @@ namespace KaraWeb.Shared.Helpers
             }
         }
 
-        public static HeaderAnalyzeError CheckPathHeader(string headerName, string path)
+        public static HeaderAnalyzeError CheckPathHeader(IFileHelper fileHelper, string headerName, string path)
         {
-            if (!string.IsNullOrEmpty(path) && Path.IsPathFullyQualified(path))
+            if (!string.IsNullOrEmpty(path) && !fileHelper.IsRelativePath(path))
             {
                 return new HeaderAnalyzeError(
                     $"The #{headerName.ToUpperInvariant()} header should be a relative path");
@@ -224,9 +221,9 @@ namespace KaraWeb.Shared.Helpers
                 { "BACKGROUNDURL", song.BackgroundUrl },
             };
 
-            foreach (var (headerName, uri) in uriHeadersToCheck)
+            foreach (var uriHeader in uriHeadersToCheck)
             {
-                var error = CheckUriHeader(headerName, uri);
+                var error = CheckUriHeader(uriHeader.Key, uriHeader.Value);
                 if (error != null)
                 {
                     yield return error;
@@ -247,7 +244,7 @@ namespace KaraWeb.Shared.Helpers
 
         public static IEnumerable<HeaderAnalyzeError> CheckTimeHeaders(IAnalyzableSong song)
         {
-            var timeHeadersToCheck = new Dictionary<string, (double?, bool)>
+            var timeHeadersToCheck = new Dictionary<string, (decimal?, bool)>
             {
                 { "GAP", (song.Gap, true) },
                 { "START", (song.Start, true) },
@@ -256,16 +253,16 @@ namespace KaraWeb.Shared.Helpers
                 { "PREVIEWSTART", (song.PreviewStart, true) },
             };
 
-            foreach (var (headerName, (timeValue, mustBePositive)) in timeHeadersToCheck)
+            foreach (var timeHeader in timeHeadersToCheck)
             {
-                foreach (var error in CheckTimeHeader(headerName, timeValue, mustBePositive))
+                foreach (var error in CheckTimeHeader(timeHeader.Key, timeHeader.Value.Item1, timeHeader.Value.Item2))
                 {
                     yield return error;
                 }
             }
         }
 
-        public static IEnumerable<HeaderAnalyzeError> CheckTimeHeader(string headerName, double? time, bool mustBePositive)
+        public static IEnumerable<HeaderAnalyzeError> CheckTimeHeader(string headerName, decimal? time, bool mustBePositive)
         {
             var errors = new List<HeaderAnalyzeError>();
             if (!time.HasValue)
@@ -273,12 +270,12 @@ namespace KaraWeb.Shared.Helpers
                 return errors;
             }
 
-            if (time.Value % 1 != 0)
+            if (time % 1 != 0)
             {
                 errors.Add(new HeaderAnalyzeError($"The new format version recommend a #{headerName.ToUpperInvariant()} header in ms (integer)", true));
             }
 
-            if (mustBePositive && time.Value < 0)
+            if (mustBePositive && time < 0)
             {
                 errors.Add(new HeaderAnalyzeError($"#{headerName.ToUpperInvariant()} header value must be positive"));
             }
@@ -286,7 +283,7 @@ namespace KaraWeb.Shared.Helpers
             return errors;
         }
 
-        #endregion
+#endregion
 
         public static Task<List<NoteAnalyzeError>> CheckNotesErrorsAsync(IAnalyzableSong song,
             IEnumerable<IAnalyzableSongNote> songNotes,

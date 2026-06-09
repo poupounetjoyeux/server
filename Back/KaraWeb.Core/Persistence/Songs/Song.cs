@@ -29,7 +29,7 @@ namespace KaraWeb.Core.Persistence.Songs
         [MaxLength(6)]
         public string Version { get; set; }
 
-        public double? Bpm { get; set; }
+        public decimal? Bpm { get; set; }
 
         [MaxLength(1000)]
         public string Title { get; set; }
@@ -39,11 +39,11 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public string Audio { get; set; }
 
-        public double? Gap { get; set; }
+        public decimal? Gap { get; set; }
 
-        public double? Start { get; set; }
+        public decimal? Start { get; set; }
 
-        public double? End { get; set; }
+        public decimal? End { get; set; }
 
         public virtual ICollection<SongPlayer> Players { get; set; } = new List<SongPlayer>();
 
@@ -62,13 +62,13 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public string Video { get; set; }
 
-        public double? VideoGap { get; set; }
+        public decimal? VideoGap { get; set; }
 
         public string Vocals { get; set; }
 
         public string Instrumental { get; set; }
 
-        public double? PreviewStart { get; set; }
+        public decimal? PreviewStart { get; set; }
 
         public int? MedleyStart { get; set; }
 

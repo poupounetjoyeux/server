@@ -18,7 +18,7 @@ namespace KaraWeb.Tests.SDK
             var library = await connector.Libraries.GetLibrariesAsync().FirstOrDefaultAsync();
             Assert.That(library, Is.Not.Null, "We should have load at least one library");
 
-            var librarySong = await connector.Libraries.GetSongsAsync(library.Id).FirstOrDefaultAsync(s => s.HasAudio);
+            var librarySong = await connector.Libraries.GetSongsAsync(library.Id, false).FirstOrDefaultAsync(s => s.HasAudio);
             Assert.That(librarySong, Is.Not.Null, $"The library with ID {library.Id} should contains at least one song with audio");
 
             var songDetails = await connector.Songs.GetSongDetailsAsync(librarySong.Id);

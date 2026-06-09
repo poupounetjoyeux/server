@@ -9,17 +9,17 @@ namespace KaraWeb.Shared.Models.Songs
         string Title { get; }
         string Artist { get; }
         string Audio { get; }
-        double? Gap { get; }
-        double? Start { get; }
-        double? End { get; }
+        decimal? Gap { get; }
+        decimal? Start { get; }
+        decimal? End { get; }
         string Video { get; }
-        double? VideoGap { get; }
+        decimal? VideoGap { get; }
         string Vocals { get; }
         string Instrumental { get; }
-        double? PreviewStart { get; }
+        decimal? PreviewStart { get; }
         string Cover { get; }
         string Background { get; }
-        double? Bpm { get; }
+        decimal? Bpm { get; }
         int? MedleyStart { get; }
         int? MedleyEnd { get; }
         string AudioUrl { get; }

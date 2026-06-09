@@ -77,8 +77,8 @@ namespace KaraWeb.Core.Migrations
                     b.Property<string>("BackgroundUrl")
                         .HasColumnType("TEXT");
 
-                    b.Property<double?>("Bpm")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("Bpm")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Comment")
                         .HasColumnType("TEXT");
@@ -100,11 +100,11 @@ namespace KaraWeb.Core.Migrations
                         .HasMaxLength(25)
                         .HasColumnType("TEXT");
 
-                    b.Property<double?>("End")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("End")
+                        .HasColumnType("TEXT");
 
-                    b.Property<double?>("Gap")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("Gap")
+                        .HasColumnType("TEXT");
 
                     b.PrimitiveCollection<string>("Genres")
                         .HasColumnType("TEXT");
@@ -130,8 +130,8 @@ namespace KaraWeb.Core.Migrations
                     b.PrimitiveCollection<string>("NotManagedHeaders")
                         .HasColumnType("TEXT");
 
-                    b.Property<double?>("PreviewStart")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("PreviewStart")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProvidedBy")
                         .HasColumnType("TEXT");
@@ -144,8 +144,8 @@ namespace KaraWeb.Core.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<double?>("Start")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("Start")
+                        .HasColumnType("TEXT");
 
                     b.PrimitiveCollection<string>("Tags")
                         .HasColumnType("TEXT");
@@ -161,8 +161,8 @@ namespace KaraWeb.Core.Migrations
                     b.Property<string>("Video")
                         .HasColumnType("TEXT");
 
-                    b.Property<double?>("VideoGap")
-                        .HasColumnType("REAL");
+                    b.Property<decimal?>("VideoGap")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("VideoUrl")
                         .HasColumnType("TEXT");

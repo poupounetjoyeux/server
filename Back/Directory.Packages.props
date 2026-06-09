@@ -4,6 +4,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageVersion Include="log4net" Version="3.3.1" />
+		<PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
 		<PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
 		<PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
 		<PackageVersion Include="Microsoft.EntityFrameworkCore.Proxies" Version="10.0.8" />
@@ -14,5 +15,6 @@
 		<PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.7" />
 		<PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
 		<PackageVersion Include="Quartz" Version="3.18.1" />
+		<PackageVersion Include="System.Text.Json" Version="10.0.8" />
 	</ItemGroup>
 </Project>

@@ -29,10 +29,10 @@ namespace KaraWeb.SDK.Connectors.Songs
             if (!response.IsSuccessStatusCode)
             {
                 throw new KaraWebException(
-                    $"Unable to get song details: {await response.Content.ReadAsStringAsync(cancellationToken)}");
+                    $"Unable to get song details: {await response.Content.ReadAsStringAsync()}");
             }
 
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var responseStream = await response.Content.ReadAsStreamAsync();
             return await JsonSerializer.DeserializeAsync<DetailedSongDto>(responseStream
                 , JsonHelper.DefaultJsonSerializerOptions, cancellationToken);
         }
@@ -43,10 +43,10 @@ namespace KaraWeb.SDK.Connectors.Songs
             if (!response.IsSuccessStatusCode)
             {
                 throw new KaraWebException(
-                    $"Unable to get song file stream {fileType}: {await response.Content.ReadAsStringAsync(cancellationToken)}");
+                    $"Unable to get song file stream {fileType}: {await response.Content.ReadAsStringAsync()}");
             }
 
-            return await response.Content.ReadAsStreamAsync(cancellationToken);
+            return await response.Content.ReadAsStreamAsync();
         }
     }
 }

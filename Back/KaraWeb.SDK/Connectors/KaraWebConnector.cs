@@ -9,9 +9,9 @@ namespace KaraWeb.SDK.Connectors
     {
         private readonly HttpClient _httpClient;
 
-        public KaraWebConnector(Uri baseUri)
+        public KaraWebConnector(Uri baseUri, TimeSpan? timeout = null)
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) };
 
             Libraries = new LibrariesConnector(_httpClient, baseUri);
             Songs = new SongsConnector(_httpClient, baseUri);
