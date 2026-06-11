@@ -1,5 +1,4 @@
 ﻿using KaraWeb.Core.Persistence;
-using KaraWeb.Core.Persistence.Songs;
 using KaraWeb.Shared.Helpers;
 using KaraWeb.Shared.Models.Libraries;
 using KaraWeb.Shared.Models.Songs.Files;
@@ -14,11 +13,11 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Libraries;
 using KaraWeb.Core.Services.SongParser;
-using KaraWeb.Shared;
 using KaraWeb.Shared.Models.Songs.Messages;
 using Microsoft.EntityFrameworkCore;
+using KaraWeb.Core.Persistence.Models.Songs;
+using KaraWeb.Core.Persistence.Models.Libraries;
 
 namespace KaraWeb.Core.Jobs
 {
@@ -30,7 +29,6 @@ namespace KaraWeb.Core.Jobs
         public const string LibraryKey = "library";
         public const string AnalyzeTypeKey = "analyze_type";
         public const string SongParserServiceKey = "song_parser_service";
-        public const string FileHelperKey = "file_helper";
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -49,12 +47,6 @@ namespace KaraWeb.Core.Jobs
             if (context.MergedJobDataMap[SongParserServiceKey] is not ISongParserService songParserService)
             {
                 _logger.Error("Unable to retrieve a valid song parser service from job context");
-                return;
-            }
-
-            if (context.MergedJobDataMap[FileHelperKey] is not IFileHelper fileHelper)
-            {
-                _logger.Error("Unable to retrieve a valid file helper from job context");
                 return;
             }
 
@@ -85,7 +77,7 @@ namespace KaraWeb.Core.Jobs
 
             var parsedSongIds = new ConcurrentBag<Guid>();
             await Parallel.ForEachAsync(foundFiles, context.CancellationToken,
-                (f, c) => ProcessSongFile(fileHelper, songParserService, library.Id, analyzeType, parsedSongIds, f, c));
+                (f, c) => ProcessSongFile(songParserService, library.Id, analyzeType, parsedSongIds, f, c));
 
             var songsToDelete =
                 await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id))
@@ -113,7 +105,7 @@ namespace KaraWeb.Core.Jobs
             return Convert.ToHexStringLower(hashBytes);
         }
 
-        private async ValueTask ProcessSongFile(IFileHelper fileHelper, ISongParserService songParserService, Guid libraryId, LibraryAnalyzeType analyzeType,
+        private async ValueTask ProcessSongFile(ISongParserService songParserService, Guid libraryId, LibraryAnalyzeType analyzeType,
             ConcurrentBag<Guid> parsedSongIds, FileInfo songFile, CancellationToken cancellationToken)
         {
             try
@@ -162,23 +154,17 @@ namespace KaraWeb.Core.Jobs
                     {
                         await dbContext.Songs.AddAsync(song, cancellationToken);
                     }
-
-                    _logger.Info($"Checking errors on song '{songFile.FullName}'");
-
-                    var analyzeResult = await SongValidationHelper.CheckFullSongErrorsAsync(fileHelper, song, song.Notes, cancellationToken);
-                    analyzeResult.HeadersErrors.ForEach(e => song.AddAlert(e.IsWarning ? AlertType.HeaderWarning : AlertType.HeaderError, e.Message));
-                    analyzeResult.NotesErrors.ForEach(e => song.AddAlert(AlertType.NoteError, e.Message, e.FileLine));
                 }
                 else
                 {
-                    foreach (var songAlert in song.Alerts.Where(a => a.Type == AlertType.MissingFileError).ToList())
+                    foreach (var songAlert in song.Alerts.Where(a => a.Type == AlertType.MissingFile).ToList())
                     {
                         song.Alerts.Remove(songAlert);
                     }
                 }
 
                 var missingFilesErrors = await CheckSongFilesExistence(song, cancellationToken);
-                missingFilesErrors.ForEach(m => song.AddAlert(AlertType.MissingFileError, m));
+                missingFilesErrors.ForEach(m => song.Alerts.Add(new SongAlert{Type = AlertType.MissingFile, Level = AlertLevel.Error, Message = m}));
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 parsedSongIds.Add(song.Id);

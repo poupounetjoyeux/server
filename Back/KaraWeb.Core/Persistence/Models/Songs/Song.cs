@@ -4,13 +4,14 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.IO;
 using System.Linq;
-using KaraWeb.Core.Persistence.Libraries;
+using KaraWeb.Core.Persistence.Models.Libraries;
 using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Files;
+using KaraWeb.Shared.Models.Songs.Medleys;
 using KaraWeb.Shared.Models.Songs.Messages;
 using Microsoft.EntityFrameworkCore;
 
-namespace KaraWeb.Core.Persistence.Songs
+namespace KaraWeb.Core.Persistence.Models.Songs
 {
     [Table("Songs")]
     [PrimaryKey(nameof(Id))]
@@ -26,10 +27,9 @@ namespace KaraWeb.Core.Persistence.Songs
 
         #region Core headers
 
-        [MaxLength(6)]
-        public string Version { get; set; }
+        public Version Version { get; set; }
 
-        public decimal? Bpm { get; set; }
+        public decimal Bpm { get; set; }
 
         [MaxLength(1000)]
         public string Title { get; set; }
@@ -39,13 +39,13 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public string Audio { get; set; }
 
-        public decimal? Gap { get; set; }
+        public TimeSpan? Gap { get; set; }
 
-        public decimal? Start { get; set; }
+        public TimeSpan? Start { get; set; }
 
-        public decimal? End { get; set; }
+        public TimeSpan? End { get; set; }
 
-        public virtual ICollection<SongPlayer> Players { get; set; } = new List<SongPlayer>();
+        public virtual List<SongPlayer> Players { get; set; } = new();
 
         public Dictionary<int, string> GetPlayers()
         {
@@ -62,17 +62,20 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public string Video { get; set; }
 
-        public decimal? VideoGap { get; set; }
+        public TimeSpan? VideoGap { get; set; }
 
         public string Vocals { get; set; }
 
         public string Instrumental { get; set; }
 
-        public decimal? PreviewStart { get; set; }
+        public TimeSpan? PreviewStart { get; set; }
 
-        public int? MedleyStart { get; set; }
+        public virtual SongMedley Medley { get; set; }
 
-        public int? MedleyEnd { get; set; }
+        public ISongMedley GetMedley()
+        {
+            return Medley;
+        }
 
         public int? Year { get; set; }
 
@@ -84,8 +87,7 @@ namespace KaraWeb.Core.Persistence.Songs
 
         public List<string> Tags { get; set; } = new();
 
-        [MaxLength(500)]
-        public string Creator { get; set; }
+        public List<string> Creators { get; set; } = new();
 
         public string ProvidedBy { get; set; }
 
@@ -102,18 +104,15 @@ namespace KaraWeb.Core.Persistence.Songs
         [MaxLength(300)]
         public string Rendition { get; set; }
 
-        [MaxLength(25)]
-        public string Encoding { get; set; }
-
         public List<string> NotManagedHeaders { get; set; } = new();
 
         #endregion
 
         #region Internal
 
-        public virtual ICollection<SongAlert> Alerts { get; set; } = new List<SongAlert>();
+        public virtual List<SongAlert> Alerts { get; set; } = new();
 
-        public virtual ICollection<SongNote> Notes { get; set; } = new List<SongNote>();
+        public virtual List<SongNote> Notes { get; set; } = new();
 
         [Required]
         public string SongFilePath { get; set; }
@@ -128,11 +127,6 @@ namespace KaraWeb.Core.Persistence.Songs
         public DateTime LastParseTime { get; set; }
 
         #endregion
-
-        public void AddAlert(AlertType type, string message, int? fileLine = null)
-        {
-            Alerts.Add(new SongAlert { Type = type, Message = message, FileLine = fileLine });
-        }
 
         public string GetSongFilePath(FileType fileType)
         {
@@ -167,18 +161,16 @@ namespace KaraWeb.Core.Persistence.Songs
             songDto.Players = Players.Select(p => p.ToDto()).ToList();
             songDto.VideoGap = VideoGap;
             songDto.PreviewStart = PreviewStart;
-            songDto.MedleyStart = MedleyStart;
-            songDto.MedleyEnd = MedleyEnd;
+            songDto.Medley = Medley?.ToDto();
             songDto.Year = Year;
             songDto.Genres = Genres.ToList();
             songDto.Languages = Languages.ToList();
             songDto.Editions = Editions.ToList();
             songDto.Tags = Tags.ToList();
-            songDto.Creator = Creator;
+            songDto.Creators = Creators.ToList();
             songDto.ProvidedBy = ProvidedBy;
             songDto.Comment = Comment;
             songDto.Rendition = Rendition;
-            songDto.Encoding = Encoding;
         }
 
         public SongDto ToDto()
@@ -191,8 +183,8 @@ namespace KaraWeb.Core.Persistence.Songs
                 HasVideo = !string.IsNullOrEmpty(Video),
                 HasVocals = !string.IsNullOrEmpty(Vocals),
                 HasInstrumental = !string.IsNullOrEmpty(Instrumental),
-                HasErrors = Alerts.Any(a => a.IsError),
-                HasWarnings = Alerts.Any(a => a.IsWarning)
+                HasErrors = Alerts.Any(a => a.Level == AlertLevel.Error),
+                HasWarnings = Alerts.Any(a => a.Level == AlertLevel.Warning)
             };
             FeedBaseSongDto(songDto);
             return songDto;

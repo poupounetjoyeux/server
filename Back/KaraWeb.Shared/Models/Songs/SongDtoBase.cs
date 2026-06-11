@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using KaraWeb.Shared.Models.Songs.Medleys;
 
 namespace KaraWeb.Shared.Models.Songs
 {
@@ -20,12 +21,13 @@ namespace KaraWeb.Shared.Models.Songs
         /// <summary>
         ///     The UltraStar format version used
         /// </summary>
-        public string Version { get; set; }
+        
+        public Version Version { get; set; }
 
         /// <summary>
         ///     The BPM of the song
         /// </summary>
-        public decimal? Bpm { get; set; }
+        public decimal Bpm { get; set; }
 
         /// <summary>
         ///     The song's title
@@ -40,20 +42,17 @@ namespace KaraWeb.Shared.Models.Songs
         /// <summary>
         ///     The GAP between start of the audio and first beat
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public decimal? Gap { get; set; }
+        public TimeSpan? Gap { get; set; }
 
         /// <summary>
         ///     The GAP between start of the audio and first beat
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public decimal? Start { get; set; }
+        public TimeSpan? Start { get; set; }
 
         /// <summary>
         ///     The GAP between start of the audio and first beat
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public decimal? End { get; set; }
+        public TimeSpan? End { get; set; }
 
         /// <summary>
         ///     Song's players defined from #P1 to #P9
@@ -72,26 +71,22 @@ namespace KaraWeb.Shared.Models.Songs
         /// <summary>
         ///     The video delay relative to the audio file
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public decimal? VideoGap { get; set; }
+        public TimeSpan? VideoGap { get; set; }
 
         /// <summary>
         ///     The offset of audio file to use for preview
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public decimal? PreviewStart { get; set; }
+        public TimeSpan? PreviewStart { get; set; }
 
         /// <summary>
-        ///     The offset of audio file to use to start in a medley
+        ///     The song medley information
         /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public int? MedleyStart { get; set; }
+        public SongMedleyDto Medley { get; set; }
 
-        /// <summary>
-        ///     The offset of audio file to use to finish in a medley
-        /// </summary>
-        /// <remarks>milliseconds</remarks>
-        public int? MedleyEnd { get; set; }
+        public ISongMedley GetMedley()
+        {
+            return Medley;
+        }
 
         /// <summary>
         ///     The song's year
@@ -120,9 +115,9 @@ namespace KaraWeb.Shared.Models.Songs
         public List<string> Tags { get; set; } = new();
 
         /// <summary>
-        ///     The song's creator
+        ///     The song's creators
         /// </summary>
-        public string Creator { get; set; }
+        public List<string> Creators { get; set; } = new();
 
         /// <summary>
         ///     The source of the song
@@ -139,11 +134,6 @@ namespace KaraWeb.Shared.Models.Songs
         ///     Specific recording of the song
         /// </summary>
         public string Rendition { get; set; }
-
-        /// <summary>
-        ///     Specific encoding of the song file
-        /// </summary>
-        public string Encoding { get; set; }
 
         #endregion
     }

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using KaraWeb.Shared.Models.Songs.Messages;
 using Microsoft.EntityFrameworkCore;
 
-namespace KaraWeb.Core.Persistence.Songs
+namespace KaraWeb.Core.Persistence.Models.Songs
 {
     [Table("SongAlerts")]
     [Index(nameof(SongId))]
@@ -22,21 +22,19 @@ namespace KaraWeb.Core.Persistence.Songs
         public AlertType Type { get; set; }
 
         [Required]
+        public AlertLevel Level { get; set; }
+
+        [Required]
         public string Message { get; set; }
 
         public int? FileLine { get; set; }
-
-        [NotMapped]
-        public bool IsError => Type is AlertType.ParsingError or AlertType.HeaderError or AlertType.NoteError or AlertType.MissingFileError;
-
-        [NotMapped]
-        public bool IsWarning => Type is AlertType.ParsingWarning or AlertType.HeaderWarning or AlertType.NoteWarning;
 
         public SongAlertDto ToDto()
         {
             return new SongAlertDto
             {
                 Type = Type,
+                Level = Level,
                 Message = Message,
                 FileLine = FileLine
             };

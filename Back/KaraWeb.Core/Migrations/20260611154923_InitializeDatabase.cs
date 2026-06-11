@@ -33,29 +33,27 @@ namespace KaraWeb.Core.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     LibraryId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Version = table.Column<string>(type: "TEXT", maxLength: 6, nullable: true),
-                    Bpm = table.Column<decimal>(type: "TEXT", nullable: true),
+                    Version = table.Column<string>(type: "TEXT", nullable: true),
+                    Bpm = table.Column<decimal>(type: "TEXT", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
                     Artist = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     Audio = table.Column<string>(type: "TEXT", nullable: true),
-                    Gap = table.Column<decimal>(type: "TEXT", nullable: true),
-                    Start = table.Column<decimal>(type: "TEXT", nullable: true),
-                    End = table.Column<decimal>(type: "TEXT", nullable: true),
+                    Gap = table.Column<double>(type: "REAL", nullable: true),
+                    Start = table.Column<double>(type: "REAL", nullable: true),
+                    End = table.Column<double>(type: "REAL", nullable: true),
                     Cover = table.Column<string>(type: "TEXT", nullable: true),
                     Background = table.Column<string>(type: "TEXT", nullable: true),
                     Video = table.Column<string>(type: "TEXT", nullable: true),
-                    VideoGap = table.Column<decimal>(type: "TEXT", nullable: true),
+                    VideoGap = table.Column<double>(type: "REAL", nullable: true),
                     Vocals = table.Column<string>(type: "TEXT", nullable: true),
                     Instrumental = table.Column<string>(type: "TEXT", nullable: true),
-                    PreviewStart = table.Column<decimal>(type: "TEXT", nullable: true),
-                    MedleyStart = table.Column<int>(type: "INTEGER", nullable: true),
-                    MedleyEnd = table.Column<int>(type: "INTEGER", nullable: true),
+                    PreviewStart = table.Column<double>(type: "REAL", nullable: true),
                     Year = table.Column<int>(type: "INTEGER", nullable: true),
                     Genres = table.Column<string>(type: "TEXT", nullable: true),
                     Languages = table.Column<string>(type: "TEXT", nullable: true),
                     Editions = table.Column<string>(type: "TEXT", nullable: true),
                     Tags = table.Column<string>(type: "TEXT", nullable: true),
-                    Creator = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Creators = table.Column<string>(type: "TEXT", nullable: true),
                     ProvidedBy = table.Column<string>(type: "TEXT", nullable: true),
                     Comment = table.Column<string>(type: "TEXT", nullable: true),
                     AudioUrl = table.Column<string>(type: "TEXT", nullable: true),
@@ -63,7 +61,6 @@ namespace KaraWeb.Core.Migrations
                     CoverUrl = table.Column<string>(type: "TEXT", nullable: true),
                     BackgroundUrl = table.Column<string>(type: "TEXT", nullable: true),
                     Rendition = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    Encoding = table.Column<string>(type: "TEXT", maxLength: 25, nullable: true),
                     NotManagedHeaders = table.Column<string>(type: "TEXT", nullable: true),
                     SongFilePath = table.Column<string>(type: "TEXT", nullable: false),
                     AnalyzedFileHash = table.Column<string>(type: "TEXT", nullable: false),
@@ -87,6 +84,7 @@ namespace KaraWeb.Core.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SongId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    Level = table.Column<int>(type: "INTEGER", nullable: false),
                     Message = table.Column<string>(type: "TEXT", nullable: false),
                     FileLine = table.Column<int>(type: "INTEGER", nullable: true)
                 },
@@ -95,6 +93,25 @@ namespace KaraWeb.Core.Migrations
                     table.PrimaryKey("PK_SongAlerts", x => x.Id);
                     table.ForeignKey(
                         name: "FK_SongAlerts_Songs_SongId",
+                        column: x => x.SongId,
+                        principalTable: "Songs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SongMedleys",
+                columns: table => new
+                {
+                    SongId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MedleyStart = table.Column<double>(type: "REAL", nullable: false),
+                    MedleyEnd = table.Column<double>(type: "REAL", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SongMedleys", x => x.SongId);
+                    table.ForeignKey(
+                        name: "FK_SongMedleys_Songs_SongId",
                         column: x => x.SongId,
                         principalTable: "Songs",
                         principalColumn: "Id",
@@ -165,6 +182,9 @@ namespace KaraWeb.Core.Migrations
         {
             migrationBuilder.DropTable(
                 name: "SongAlerts");
+
+            migrationBuilder.DropTable(
+                name: "SongMedleys");
 
             migrationBuilder.DropTable(
                 name: "SongNotes");

@@ -1,10 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Libraries;
-using KaraWeb.Core.Persistence.Songs;
+﻿using KaraWeb.Core.Persistence.Converters;
+using KaraWeb.Core.Persistence.Models.Libraries;
+using KaraWeb.Core.Persistence.Models.Songs;
 using log4net;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace KaraWeb.Core.Persistence
 {
@@ -22,6 +23,21 @@ namespace KaraWeb.Core.Persistence
         {
             optionsBuilder
                 .UseSqlite($"Data Source={DbFilePath}").UseLazyLoadingProxies();
+        }
+
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder
+                .Properties<TimeSpan?>()
+                .HaveConversion<TimeSpanValueConverter>();
+
+            configurationBuilder
+                .Properties<TimeSpan>()
+                .HaveConversion<TimeSpanValueConverter>();
+
+            configurationBuilder
+                .Properties<Version>()
+                .HaveConversion<VersionValueConverter>();
         }
 
         public static async Task<bool> EnsureDatabase(ILog logger)

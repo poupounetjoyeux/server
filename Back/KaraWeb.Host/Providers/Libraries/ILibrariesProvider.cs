@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Libraries;
+using KaraWeb.Core.Persistence.Models.Libraries;
 using KaraWeb.Shared.Models.Libraries;
 
 namespace KaraWeb.Host.Providers.Libraries

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using KaraWeb.Shared.Models.Songs.Medleys;
 
 namespace KaraWeb.Shared.Helpers
 {
@@ -16,274 +17,188 @@ namespace KaraWeb.Shared.Helpers
     /// </summary>
     public static class SongValidationHelper
     {
-        public const int MaxRecommendedHeaderSize = 2048;
-
         public static async Task<FullAnalyzeResult> CheckFullSongErrorsAsync(IFileHelper fileHelper, IAnalyzableSong song,
             IEnumerable<IAnalyzableSongNote> notes, CancellationToken cancellationToken)
         {
             var result = new FullAnalyzeResult();
-            result.HeadersErrors.AddRange(await CheckHeadersErrorsAsync(fileHelper, song, cancellationToken));
+            result.InfoErrors.AddRange(await CheckInfosErrorsAsync(fileHelper, song, cancellationToken));
             result.NotesErrors.AddRange(await CheckNotesErrorsAsync(song, notes, cancellationToken));
             return result;
         }
 
-        #region Headers
+        #region Infos
 
-        public static Task<List<HeaderAnalyzeError>> CheckHeadersErrorsAsync(IFileHelper fileHelper, IAnalyzableSong song,
+        public static Task<List<InfoAnalyzeError>> CheckInfosErrorsAsync(IFileHelper fileHelper, IAnalyzableSong song,
             CancellationToken cancellationToken)
         {
             return Task.Run(() =>
             {
-                var errors = new List<HeaderAnalyzeError>();
+                var errors = new List<InfoAnalyzeError>();
 
-                if (CheckEncodingHeader(song.Encoding) is { } encodingError)
-                {
-                    errors.Add(encodingError);
-                }
-
-                if (CheckVersionHeader(song.Version) is { } versionError)
-                {
-                    errors.Add(versionError);
-                }
-
-                errors.AddRange(CheckMandatoryHeaders(song));
-                errors.AddRange(CheckPathHeaders(fileHelper, song));
+                errors.AddRange(CheckMandatoryValues(song));
+                errors.AddRange(CheckPaths(fileHelper, song));
 
                 if (CheckBpmHeader(song.Bpm) is { } bpmError)
                 {
                     errors.Add(bpmError);
                 }
 
-                errors.AddRange(CheckMedleyHeaders(song.MedleyStart, song.MedleyEnd));
-                errors.AddRange(CheckPlayerHeaders(song));
-                errors.AddRange(CheckTimeHeaders(song));
-                errors.AddRange(CheckUriHeaders(song));
-                errors.AddRange(CheckLanguageHeader(song.Languages));
+                errors.AddRange(CheckStartEnd(song.Start, song.End));
+                errors.AddRange(CheckMedley(song.GetMedley()));
+                errors.AddRange(CheckPlayers(song));
+                errors.AddRange(CheckTimes(song));
+                errors.AddRange(CheckUris(song));
+                errors.AddRange(CheckLanguages(song.Version, song.Languages));
 
                 return errors;
             }, cancellationToken);
         }
 
-        public static HeaderAnalyzeError CheckEncodingHeader(string encoding)
+        private static IEnumerable<InfoAnalyzeError> CheckMandatoryValues(IAnalyzableSong song)
         {
-            if (string.IsNullOrEmpty(encoding))
+            if (string.IsNullOrEmpty(song.Audio))
             {
-                return null;
+                yield return new InfoAnalyzeError("A valid audio file is mandatory");
             }
 
-            var message = !EncodingHelper.IsDefaultEncoding(encoding)
-                ? "Prefer using UTF8 (without BOM) for your files encoding"
-                : "When song encoding is already in UTF8, #ENCODING header should be removed";
-            return new HeaderAnalyzeError(message, true);
+            if (string.IsNullOrEmpty(song.Title))
+            {
+                yield return new InfoAnalyzeError("A title is mandatory");
+            }
 
+            if (string.IsNullOrEmpty(song.Artist))
+            {
+                yield return new InfoAnalyzeError("An artist is mandatory");
+            }
         }
 
-        public static HeaderAnalyzeError CheckVersionHeader(string version)
+        public static InfoAnalyzeError CheckBpmHeader(decimal? bpm)
         {
-            if (string.IsNullOrEmpty(version))
-            {
-                return new HeaderAnalyzeError("It's recommended to add the #VERSION header at the top of your file", true);
-            }
-
-            var versionParts = version.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            if (versionParts.Length != 3 || versionParts.Any(p => !int.TryParse(p, out _)))
-            {
-                return new HeaderAnalyzeError("The #VERSION header format is incorrect must be X.Y.Z");
-            }
-
-            return null;
+            return bpm <= 1 ? new InfoAnalyzeError("The song BPM must be grater than 0") : null;
         }
 
-        public static HeaderAnalyzeError CheckBpmHeader(decimal? bpm)
+        public static IEnumerable<InfoAnalyzeError> CheckStartEnd(TimeSpan? start, TimeSpan? end)
         {
-            return bpm switch
+            if (start is {TotalMilliseconds: <0})
             {
-                null => new HeaderAnalyzeError("The song BPM is mandatory (#BPM header)"),
-                <= 0 => new HeaderAnalyzeError("The song BPM must be grater than 0"),
-                _ => null
+                yield return new InfoAnalyzeError("Start cannot be negative");
+            }
+
+            if (end is {TotalMilliseconds: <0})
+            {
+                yield return new InfoAnalyzeError("End cannot be negative");
+            }
+
+            if (start.HasValue && end.HasValue && end.Value <= start.Value)
+            {
+                yield return new InfoAnalyzeError("End must be greater than start");
+            }
+        }
+
+        public static IEnumerable<InfoAnalyzeError> CheckMedley(ISongMedley medley)
+        {
+            if (medley == null)
+            {
+                yield break;
+            }
+
+            if (medley.MedleyStart >= medley.MedleyEnd)
+            {
+                yield return new InfoAnalyzeError("Medley end must be greater than medley start");
+            }
+        }
+
+        public static IEnumerable<InfoAnalyzeError> CheckPaths(IFileHelper fileHelper, IAnalyzableSong song)
+        {
+            var pathsToCheck = new Dictionary<string, string>
+            {
+                { "audio", song.Audio },
+                { "video", song.Video },
+                { "cover", song.Cover },
+                { "background", song.Background },
+                { "vocals", song.Vocals },
+                { "instrumental", song.Instrumental },
             };
-        }
 
-        public static IEnumerable<HeaderAnalyzeError> CheckMedleyHeaders(int? medleyStart, int? medleyEnd)
-        {
-            if (medleyStart is < 0)
+            foreach (var pathToCheck in pathsToCheck)
             {
-                yield return new HeaderAnalyzeError("#MEDLEYSTART header must be positive");
-            }
-
-            if (medleyEnd is < 0)
-            {
-                yield return new HeaderAnalyzeError("#MEDLEYEND header must be positive");
-            }
-
-            if (medleyStart > medleyEnd)
-            {
-                yield return new HeaderAnalyzeError("#MEDLEYEND header must be greater than #MEDLEYSTART");
-            }
-        }
-
-        public static IEnumerable<HeaderAnalyzeError> CheckMandatoryHeaders(IAnalyzableSong song)
-        {
-            var mandatoryHeadersToCheck = new Dictionary<string, string>
-            {
-                { "AUDIO", song.Audio },
-                { "TITLE", song.Title },
-                { "ARTIST", song.Artist }
-            };
-
-            foreach (var mandatoryHeader in mandatoryHeadersToCheck)
-            {
-                var error = CheckMandatoryHeader(mandatoryHeader.Key, mandatoryHeader.Value);
-                if (error != null)
+                if (!string.IsNullOrEmpty(pathToCheck.Value) && !fileHelper.IsRelativePath(pathToCheck.Value))
                 {
-                    yield return error;
-                }
-            }
-
-        }
-
-        public static HeaderAnalyzeError CheckMandatoryHeader(string headerName, string value)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return new HeaderAnalyzeError($"The header #{headerName.ToUpperInvariant()} is mandatory");
-            }
-
-            return null;
-        }
-
-        public static IEnumerable<HeaderAnalyzeError> CheckPathHeaders(IFileHelper fileHelper, IAnalyzableSong song)
-        {
-            var pathHeadersToCheck = new Dictionary<string, string>
-            {
-                { "AUDIO", song.Audio },
-                { "VIDEO", song.Video },
-                { "COVER", song.Cover },
-                { "BACKGROUND", song.Background },
-                { "VOCALS", song.Vocals },
-                { "INSTRUMENTAL", song.Instrumental },
-            };
-
-            foreach (var pathHeader in pathHeadersToCheck)
-            {
-                var error = CheckPathHeader(fileHelper, pathHeader.Key, pathHeader.Value);
-                if (error != null)
-                {
-                    yield return error;
+                    yield return new InfoAnalyzeError(
+                        $"The {pathToCheck.Key} path must be a relative path");
                 }
             }
         }
 
-        public static HeaderAnalyzeError CheckPathHeader(IFileHelper fileHelper, string headerName, string path)
+        public static IEnumerable<InfoAnalyzeError> CheckLanguages(Version version, IEnumerable<string> languages)
         {
-            if (!string.IsNullOrEmpty(path) && !fileHelper.IsRelativePath(path))
+            if (version == null)
             {
-                return new HeaderAnalyzeError(
-                    $"The #{headerName.ToUpperInvariant()} header should be a relative path");
+                // Unversioned files didn't respect this
+                yield break;
             }
 
-            return null;
+            foreach (var invalidLanguage in languages.Where(l => !LanguagesHelper.IsValidLanguage(l)))
+            {
+                yield return new InfoAnalyzeError(
+                    $"The language '{invalidLanguage}' is not an ISO 639.2 english name language", true);
+            }
         }
 
-        public static List<HeaderAnalyzeError> CheckLanguageHeader(IEnumerable<string> languages)
-        {
-            return languages.Where(l => !LanguagesHelper.IsValidLanguage(l)).Select(l =>
-                new HeaderAnalyzeError($"The language '{l}' is not an ISO 639.2 english name language", true)).ToList();
-        }
-
-        public static IEnumerable<HeaderAnalyzeError> CheckPlayerHeaders(IAnalyzableSong song)
+        public static IEnumerable<InfoAnalyzeError> CheckPlayers(IAnalyzableSong song)
         {
             var songPlayers = song.GetPlayers();
             foreach (var songPlayer in songPlayers)
             {
                 if (string.IsNullOrEmpty(songPlayer.Value))
                 {
-                    yield return new HeaderAnalyzeError(
+                    yield return new InfoAnalyzeError(
                         $"The player {songPlayer.Key} has no name defined (#P{songPlayer.Key} header)");
                 }
 
                 if (songPlayer.Key > songPlayers.Count)
                 {
-                    yield return new HeaderAnalyzeError(
+                    yield return new InfoAnalyzeError(
                         $"Prefer using player indexes by ascending order. #P{songPlayer.Key} could be replaced by a lower player number value",
                         true);
                 }
             }
         }
 
-        public static IEnumerable<HeaderAnalyzeError> CheckUriHeaders(IAnalyzableSong song)
+        public static IEnumerable<InfoAnalyzeError> CheckUris(IAnalyzableSong song)
         {
-            var uriHeadersToCheck = new Dictionary<string, string>
+            var urisToCheck = new Dictionary<string, string>
             {
-                { "AUDIOURL", song.AudioUrl },
-                { "VIDEOURL", song.VideoUrl },
-                { "COVERURL", song.CoverUrl },
-                { "BACKGROUNDURL", song.BackgroundUrl },
+                { "audio", song.AudioUrl },
+                { "video", song.VideoUrl },
+                { "cover", song.CoverUrl },
+                { "background", song.BackgroundUrl },
             };
 
-            foreach (var uriHeader in uriHeadersToCheck)
+            foreach (var uriToCheck in urisToCheck)
             {
-                var error = CheckUriHeader(uriHeader.Key, uriHeader.Value);
-                if (error != null)
+                if (!string.IsNullOrEmpty(uriToCheck.Value) && !Uri.IsWellFormedUriString(uriToCheck.Value, UriKind.Absolute))
                 {
-                    yield return error;
+                    yield return new InfoAnalyzeError(
+                        $"The {uriToCheck.Key} URL is not a valid URL according to RFC 1738", true);
                 }
             }
         }
 
-        public static HeaderAnalyzeError CheckUriHeader(string headerName, string uri)
+        public static IEnumerable<InfoAnalyzeError> CheckTimes(IAnalyzableSong song)
         {
-            if (!string.IsNullOrEmpty(uri) && !Uri.IsWellFormedUriString(uri, UriKind.Absolute))
+            if (song.Gap is { TotalMilliseconds: < 0 })
             {
-                return new HeaderAnalyzeError(
-                    $"The #{headerName.ToUpperInvariant()} header should be a valid URL according to RFC 1738", true);
+                yield return new InfoAnalyzeError("A GAP cannot be negative");
             }
 
-            return null;
-        }
-
-        public static IEnumerable<HeaderAnalyzeError> CheckTimeHeaders(IAnalyzableSong song)
-        {
-            var timeHeadersToCheck = new Dictionary<string, (decimal?, bool)>
+            if (song.PreviewStart is { TotalMilliseconds: < 0 })
             {
-                { "GAP", (song.Gap, true) },
-                { "START", (song.Start, true) },
-                { "END", (song.End, true) },
-                { "VIDEOGAP", (song.VideoGap, false) },
-                { "PREVIEWSTART", (song.PreviewStart, true) },
-            };
-
-            foreach (var timeHeader in timeHeadersToCheck)
-            {
-                foreach (var error in CheckTimeHeader(timeHeader.Key, timeHeader.Value.Item1, timeHeader.Value.Item2))
-                {
-                    yield return error;
-                }
+                yield return new InfoAnalyzeError("A preview start cannot be negative");
             }
         }
 
-        public static IEnumerable<HeaderAnalyzeError> CheckTimeHeader(string headerName, decimal? time, bool mustBePositive)
-        {
-            var errors = new List<HeaderAnalyzeError>();
-            if (!time.HasValue)
-            {
-                return errors;
-            }
-
-            if (time % 1 != 0)
-            {
-                errors.Add(new HeaderAnalyzeError($"The new format version recommend a #{headerName.ToUpperInvariant()} header in ms (integer)", true));
-            }
-
-            if (mustBePositive && time < 0)
-            {
-                errors.Add(new HeaderAnalyzeError($"#{headerName.ToUpperInvariant()} header value must be positive"));
-            }
-
-            return errors;
-        }
-
-#endregion
+        #endregion
 
         public static Task<List<NoteAnalyzeError>> CheckNotesErrorsAsync(IAnalyzableSong song,
             IEnumerable<IAnalyzableSongNote> songNotes,

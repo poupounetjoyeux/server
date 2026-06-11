@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Songs;
+using KaraWeb.Core.Persistence.Models.Songs;
 
 namespace KaraWeb.Core.Services.SongParser
 {

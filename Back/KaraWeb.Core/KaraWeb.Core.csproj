@@ -4,6 +4,11 @@
 		<RootNamespace>KaraWeb.Core</RootNamespace>
 		<AssemblyName>KaraWeb.Core</AssemblyName>
 	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="NewFolder\**" />
+	  <EmbeddedResource Remove="NewFolder\**" />
+	  <None Remove="NewFolder\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\KaraWeb.Shared\KaraWeb.Shared.csproj" />

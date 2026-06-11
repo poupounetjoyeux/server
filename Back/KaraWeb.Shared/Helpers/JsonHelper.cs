@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using KaraWeb.Shared.JsonConverters;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace KaraWeb.Shared.Helpers
@@ -15,6 +16,9 @@ namespace KaraWeb.Shared.Helpers
             options.AllowTrailingCommas = true;
             options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             options.Converters.Add(new JsonStringEnumConverter());
+            options.Converters.Add(new VersionJsonConverter());
+            options.Converters.Add(new TimeSpanJsonConverter());
+            options.Converters.Add(new TimeSpanNullableJsonConverter());
             return options;
         }
     }

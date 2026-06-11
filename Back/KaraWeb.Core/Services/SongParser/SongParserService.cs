@@ -1,18 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Songs;
+﻿using KaraWeb.Core.Helper;
+using KaraWeb.Core.Parsers;
+using KaraWeb.Core.Persistence.Models.Songs;
+using KaraWeb.Shared;
 using KaraWeb.Shared.Exceptions;
 using KaraWeb.Shared.Helpers;
 using KaraWeb.Shared.Models.Songs.Messages;
-using KaraWeb.Shared.Models.Songs.Notes;
 using log4net;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KaraWeb.Core.Services.SongParser
 {
@@ -22,31 +23,30 @@ namespace KaraWeb.Core.Services.SongParser
     /// </summary>
     public sealed class SongParserService : ISongParserService
     {
-        private const char ListSplitter = ',';
+        private readonly IFileHelper _fileHelper;
+
         private const string EofMarker = "E";
 
         private static readonly Regex EncodingRegex = new("^#ENCODING: *(?<encoding>.+) *$",
             RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-        private static readonly Regex HeaderRegex =
-            new("^#(?<headerName>[A-Z0-9]+): *(?<headerValue>.*) *$",
-                RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-        private static readonly Regex PlayerRegex =
-            new("^(DUETSINGER)?P *(?<playerNumber>[1-9])$",
-                RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-        private static readonly Regex NoteRegex =
-            new(@"^(?<noteType>[:*RGF]) (?<startBeat>\d+) (?<duration>\d+) (?<pitch>-?\d+) (?<text>.*)$",
-                RegexOptions.Compiled | RegexOptions.Singleline);
-
-        private static readonly Regex EolRegex =
-            new(@"^-( (?<startBeat>\d+))?",
-                RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex VersionRegex = new("^#VERSION: *(?<version>.+) *$",
+            RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
         private readonly ILog _logger = LogManager.GetLogger(nameof(SongParserService));
 
-        public async Task<bool> ParseSongAsync(FileInfo songFile, Song song,
+        public SongParserService(IFileHelper fileHelper)
+        {
+            _fileHelper = fileHelper;
+        }
+
+        public Task<bool> ParseSongAsync(FileInfo songFile, Song song,
+            CancellationToken cancellationToken)
+        {
+            return ParseSongInternalAsync(songFile, song, new ParsingOptions(), cancellationToken);
+        }
+
+        private async Task<bool> ParseSongInternalAsync(FileInfo songFile, Song song, ParsingOptions options, 
             CancellationToken cancellationToken)
         {
             if (!songFile.Exists)
@@ -55,45 +55,44 @@ namespace KaraWeb.Core.Services.SongParser
                 return false;
             }
 
-            ResetSongInfos(song);
+            ResetSongInfos(song, options.Version);
 
             _logger.Info($"Start parsing song file '{songFile.FullName}'");
             var timeWatch = new Stopwatch();
             timeWatch.Start();
 
-            FileStream fileStream = null;
             StreamReader reader = null;
-            SongNote lastParsedNote = null;
+            var line = 0;
             try
             {
-                fileStream = new FileStream(
+                var fileStream = new FileStream(
                     songFile.FullName,
                     FileMode.Open,
                     FileAccess.Read,
                     FileShare.ReadWrite);
+                reader = new StreamReader(fileStream, options.Encoding);
 
-                reader = new StreamReader(fileStream, EncodingHelper.GetDefaultEncoding());
+                var parser = song.GetParser();
 
                 var eofMarkerFound = false;
                 var allHeadersParsed = false;
-                var currentPlayer = 1;
-                var currentLine = 0;
-                var parsedHeaders = new HashSet<string>();
+                var parsedHeadersCount = 0;
+                var mandatoryHeadersChecked = false;
                 while (true)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
-                    if (line == null)
+                    var fileLine = await reader.ReadLineAsync(cancellationToken);
+                    if (fileLine == null)
                     {
                         break;
                     }
 
-                    currentLine++;
-                    if (string.IsNullOrEmpty(line.Trim()))
+                    line++;
+                    if (string.IsNullOrEmpty(fileLine.Trim()))
                     {
                         continue;
                     }
 
-                    if (IsEofMarker(line))
+                    if (IsEofMarker(fileLine))
                     {
                         eofMarkerFound = true;
                         break;
@@ -101,73 +100,98 @@ namespace KaraWeb.Core.Services.SongParser
 
                     if (!allHeadersParsed)
                     {
-                        if (string.IsNullOrEmpty(song.Encoding) && TryParseSpecificEncoding(song, line))
+                        if (options.EncodingHeaderLine != line && TryParseSpecificEncoding(options.Encoding, song, fileLine, line, out var newEncoding))
                         {
-                            reader.Dispose();
-                            fileStream.Seek(0, SeekOrigin.Begin);
-                            reader = new StreamReader(fileStream, EncodingHelper.GetEncoding(song.Encoding));
-                            continue;
+                            if (parsedHeadersCount > 0)
+                            {
+                                song.AddParsingWarning(
+                                    "The #ENCODING header must be on top of the song file to improve loading performances");
+                            }
+
+                            if (newEncoding != null)
+                            {
+                                reader.Dispose();
+                                reader = null;
+                                return await ParseSongInternalAsync(songFile, song, options.WithEncoding(newEncoding, line),
+                                    cancellationToken);
+                            }
                         }
 
-                        if (TryParseHeader(song, line, parsedHeaders, currentLine))
+                        if (options.VersionHeaderLine != line && TryParseSpecificVersion(song, fileLine))
                         {
+                            if (parsedHeadersCount > 0)
+                            {
+                                song.AddParsingWarning(
+                                    "The #VERSION header must be on top of the song file to improve loading performances");
+                            }
+
+                            if (song.Version != null)
+                            {
+                                reader.Dispose();
+                                reader = null;
+                                return await ParseSongInternalAsync(songFile, song, options.WithVersion(song.Version, line),
+                                    cancellationToken);
+                            }
+                        }
+
+                        if (parser.TryParseFileHeaderLine(fileLine, line))
+                        {
+                            parsedHeadersCount++;
                             continue;
                         }
                     }
 
-                    var newNote = TryParseEndOfPhraseNote(lastParsedNote, line, currentPlayer, currentLine) ??
-                                  TryParseNote(line, currentPlayer, currentLine);
-                    if (newNote != null)
+                    if (!mandatoryHeadersChecked && !parser.AreMandatoryHeadersDefined())
                     {
-                        lastParsedNote = newNote;
-                        song.Notes.Add(newNote);
+                        break;
+                    }
+
+                    mandatoryHeadersChecked = true;
+                    if (parser.TryParseFileNoteLine(fileLine, line))
+                    {
                         allHeadersParsed = true;
                         continue;
                     }
 
-                    var playerMatch = PlayerRegex.Match(line);
-                    if (playerMatch.Success)
-                    {
-                        currentPlayer = int.Parse(playerMatch.Groups["playerNumber"].Value, CultureInfo.InvariantCulture);
-                        lastParsedNote = song.Notes.Where(n => n.PlayerNumber == currentPlayer).MaxBy(n => n.FileLine);
-                        allHeadersParsed = true;
-                        continue;
-                    }
-
-                    song.AddAlert(AlertType.ParsingError, "The line cannot be parsed", currentLine);
+                    song.AddParsingError("The line cannot be parsed", line);
                 }
 
                 if (!eofMarkerFound)
                 {
-                    song.AddAlert(AlertType.ParsingWarning, "The song doesn't contains the 'E' EOF marker");
+                    song.AddParsingWarning("The song doesn't contains the 'E' EOF marker");
                 }
 
+                parser.PostParsing();
+
+                var analyzeResult = await SongValidationHelper.CheckFullSongErrorsAsync(_fileHelper, song, song.Notes, cancellationToken);
+                song.AddAnalyzeAlerts(analyzeResult);
+
                 timeWatch.Stop();
-                _logger.Info($"Song file '{songFile.FullName}' successfully parsed in {timeWatch.Elapsed}");
+                _logger.Info(
+                    $"Song file '{songFile.FullName}' successfully parsed in {timeWatch.Elapsed} with {song.Alerts.Count(a => a.Level == AlertLevel.Error)} error(s) and {song.Alerts.Count(a => a.Level == AlertLevel.Warning)} warning(s)");
+            }
+            catch (KaraWebException e)
+            {
+                song.AddParsingError(e.Message, line);
             }
             catch (Exception e)
             {
-                timeWatch.Stop();
-                _logger.Error($"There was an error when parsing song file '{songFile.FullName}': {e}");
-                song.AddAlert(AlertType.ParsingError, $"The song cannot be parsed: {e}");
+                song.AddParsingError($"There is an exception when parsing the song file: {e}", line);
             }
             finally
             {
-                reader.Dispose();
-                if (fileStream != null)
-                {
-                    await fileStream.DisposeAsync();
-                }
+                timeWatch.Stop();
+                reader?.Dispose();
             }
 
             song.LastParseTime = DateTime.Now;
             return true;
         }
 
-        private static void ResetSongInfos(Song song)
+        private static void ResetSongInfos(Song song, Version version)
         {
-            song.Version = null;
-            song.Bpm = null;
+            song.Version = version;
+            song.Bpm = -1;
             song.Title = null;
             song.Artist = null;
             song.Audio = null;
@@ -183,16 +207,15 @@ namespace KaraWeb.Core.Services.SongParser
             song.Vocals = null;
             song.Instrumental = null;
             song.PreviewStart = null;
-            song.MedleyStart = null;
-            song.MedleyEnd = null;
+            song.Medley = null;
             song.Year = null;
 
             song.Genres.Clear();
             song.Languages.Clear();
             song.Editions.Clear();
             song.Tags.Clear();
+            song.Creators.Clear();
 
-            song.Creator = null;
             song.ProvidedBy = null;
             song.Comment = null;
             song.AudioUrl = null;
@@ -200,22 +223,60 @@ namespace KaraWeb.Core.Services.SongParser
             song.CoverUrl = null;
             song.BackgroundUrl = null;
             song.Rendition = null;
-            song.Encoding = null;
             song.NotManagedHeaders.Clear();
 
             song.Alerts.Clear();
             song.Notes.Clear();
         }
 
-        private static bool TryParseSpecificEncoding(Song song, string fileLine)
+        private static bool TryParseSpecificEncoding(Encoding currentEncoding, Song song, string fileLine, int line, out Encoding encoding)
         {
+            encoding = null;
             var declaredEncoding = EncodingRegex.Match(fileLine);
             if (!declaredEncoding.Success)
             {
                 return false;
             }
 
-            song.Encoding = EncodingHelper.SanitizeEncodingName(declaredEncoding.Groups["encoding"].Value);
+            if (currentEncoding != null)
+            {
+                throw new KaraWebException("The #ENCODING header is duplicated");
+            }
+
+            var sanitizedEncoding = EncodingHelper.SanitizeEncodingName(declaredEncoding.Groups["encoding"].Value);
+            if (EncodingHelper.IsDefaultEncoding(sanitizedEncoding))
+            {
+                song.AddParsingWarning("The #ENCODING header is deprecated. Your song is already in UTF-8 (which is recommended), you can just remove it!", line);
+            }
+            else
+            {
+                song.AddParsingWarning(
+                    "The #ENCODING header is deprecated. All file should be in UTF-8 (without BOM)", line);
+                encoding = EncodingHelper.GetEncoding(sanitizedEncoding);
+            }
+
+            return true;
+        }
+
+        private static bool TryParseSpecificVersion(Song song, string fileLine)
+        {
+            var declaredVersion = VersionRegex.Match(fileLine);
+            if (!declaredVersion.Success)
+            {
+                return false;
+            }
+
+            if (song.Version != null)
+            {
+                throw new KaraWebException("The #VERSION header is duplicated");
+            }
+
+            if (!Version.TryParse(declaredVersion.Groups["version"].Value, out var version))
+            {
+                throw new KaraWebException("The #VERSION header cannot be parsed. Format must be X.Y.Z");
+            }
+
+            song.Version = version;
             return true;
         }
 
@@ -223,425 +284,5 @@ namespace KaraWeb.Core.Services.SongParser
         {
             return line.Trim().Equals(EofMarker, StringComparison.InvariantCultureIgnoreCase);
         }
-
-        #region Headers
-
-        private static bool TryParseHeader(Song song, string fileLine, HashSet<string> parsedHeaders, int currentLine)
-        {
-            var headerLineMatch = HeaderRegex.Match(fileLine);
-            if (!headerLineMatch.Success)
-            {
-                return false;
-            }
-
-            var headerName = headerLineMatch.Groups["headerName"].Value.ToUpperInvariant();
-            var headerValue = headerLineMatch.Groups["headerValue"].Value;
-
-            if (string.IsNullOrEmpty(headerValue))
-            {
-                song.AddAlert(AlertType.ParsingWarning, $"The header #{headerName} has no value and can be removed", currentLine);
-                return true;
-            }
-
-            if (headerValue.Length > SongValidationHelper.MaxRecommendedHeaderSize)
-            {
-                song.AddAlert(AlertType.ParsingWarning, $"The header #{headerName} has a value greater than {SongValidationHelper.MaxRecommendedHeaderSize} bytes", currentLine);
-            }
-
-            if (HandleCoreHeaders(headerName, headerValue, song, currentLine, out var fixedHeaderName) ||
-                HandleExtraHeaders(headerName, headerValue, song, currentLine, out fixedHeaderName))
-            {
-                if (!parsedHeaders.Add(fixedHeaderName))
-                {
-                    song.AddAlert(AlertType.ParsingWarning, $"The header #{headerName}is duplicated", currentLine);
-                }
-
-                return true;
-            }
-
-            if (HandlePlayerHeaders(headerName, headerValue, song, parsedHeaders, currentLine))
-            {
-                return true;
-            }
-            
-            song.NotManagedHeaders.Add($"{headerName}={headerValue}");
-            return true;
-        }
-
-        private static bool HandleCoreHeaders(string headerName, string headerValue, Song song, int currentLine, out string fixedHeaderName)
-        {
-            fixedHeaderName = headerName;
-            switch (headerName)
-            {
-                case "VERSION":
-                    song.Version = headerValue;
-                    break;
-
-                case "BPM":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var bpm))
-                    {
-                        song.Bpm = bpm;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an decimal", currentLine);
-                    }
-                    break;
-
-                case "MP3":
-                case "AUDIO":
-                    if (headerName == "MP3")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning, "#MP3 header should be replaced by #AUDIO", currentLine);
-                        fixedHeaderName = "AUDIO";
-                    }
-
-                    song.Audio = headerValue;
-                    break;
-
-                case "TITLE":
-                    song.Title = headerValue;
-                    break;
-
-                case "ARTIST":
-                    song.Artist = headerValue;
-                    break;
-
-                case "GAP":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var gap))
-                    {
-                        song.Gap = gap;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
-                    }
-                    break;
-
-                case "START":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var start))
-                    {
-                        song.Start = start;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
-                    }
-                    break;
-
-                case "END":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var end))
-                    {
-                        song.End = end;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
-                    }
-                    break;
-
-                case "RELATIVE":
-                    if (headerValue.Equals("YES", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        throw new KaraWebException($"Relative mode is no more used in recent format versions.{Environment.NewLine}" +
-                                                   $"Please avoid it since files order is less permissive and this program don't aim to support it.{Environment.NewLine}" +
-                                                   $"You can always convert your old relative file by using UltraStar Deluxe song editor or UltraStar manager");
-                    }
-
-                    song.AddAlert(AlertType.ParsingWarning, "The #RELATIVE header is not enabled and can be removed", currentLine);
-                    break;
-
-                default:
-                    return false;
-            }
-
-            return true;
-        }
-
-        private static bool HandleExtraHeaders(string headerName, string headerValue, Song song, int currentLine, out string fixedHeaderName)
-        {
-            fixedHeaderName = headerName;
-            switch (headerName)
-            {
-                case "COVER":
-                    song.Cover = headerValue;
-                    break;
-
-                case "BACKGROUND":
-                    song.Background = headerValue;
-                    break;
-
-                case "VIDEO":
-                    song.Video = headerValue;
-                    break;
-
-                case "VOCALS":
-                    song.Vocals = headerValue;
-                    break;
-
-                case "INSTRUMENTALS":
-                case "INSTRUMENTAL":
-                    song.Instrumental = headerValue;
-                    if (headerName == "INSTRUMENTALS")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning,
-                            "#INSTRUMENTALS header doesn't takes a terminal 'S' in specifications", currentLine);
-                        fixedHeaderName = "INSTRUMENTAL";
-                    }
-                    break;
-
-                case "VIDEOGAP":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var videoGap))
-                    {
-                        song.VideoGap = videoGap;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
-                    }
-                    break;
-
-                case "PREVIEW":
-                case "PREVIEWSTART":
-                    if (decimal.TryParse(headerValue, CultureInfo.InvariantCulture, out var previewStart))
-                    {
-                        song.PreviewStart = previewStart;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be seconds decimal or ms integer", currentLine);
-                    }
-
-                    if (headerName == "PREVIEW")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning, "#PREVIEW header is deprecated and should be replaced by #PREVIEWSTART", currentLine);
-                        fixedHeaderName = "PREVIEWSTART";
-                    }
-                    break;
-
-                case "MEDLEYSTARTBEAT":
-                case "MEDLEYSTART":
-
-                    if (int.TryParse(headerValue, CultureInfo.InvariantCulture, out var medleyStart))
-                    {
-                        song.MedleyStart = medleyStart;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an integer", currentLine);
-                    }
-
-                    if (headerName == "MEDLEYSTARTBEAT")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning, 
-                            "#MEDLEYSTARTBEAT header is deprecated and should be replaced by #MEDLEYSTART", currentLine);
-                        fixedHeaderName = "MEDLEYSTART";
-                    }
-                    break;
-
-                case "MEDLEYENDBEAT":
-                case "MEDLEYEND":
-                    if (int.TryParse(headerValue, CultureInfo.InvariantCulture, out var medleyEnd))
-                    {
-                        song.MedleyEnd = medleyEnd;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an integer", currentLine);
-                    }
-
-                    if (headerName == "MEDLEYENDBEAT")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning, "#MEDLEYENDBEAT header is deprecated and should be replaced by #MEDLEYEND", currentLine);
-                        fixedHeaderName = "MEDLEYEND";
-                    }
-                    break;
-
-                case "YEAR":
-                    if (int.TryParse(headerValue, CultureInfo.InvariantCulture, out var year))
-                    {
-                        song.Year = year;
-                    }
-                    else
-                    {
-                        song.AddAlert(AlertType.ParsingError, $"Unable to parse #{headerName} header, it must be an integer", currentLine);
-                    }
-                    break;
-
-                case "GENRE":
-                    song.Genres.AddRange(headerValue
-                        .Split(new[] { ListSplitter }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(v => v.Trim()));
-                    break;
-
-                case "LANGUAGE":
-                    song.Languages.AddRange(headerValue
-                        .Split(new[] { ListSplitter }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(v => v.Trim()));
-                    break;
-
-                case "EDITION":
-                    song.Editions.AddRange(headerValue
-                        .Split(new[] { ListSplitter }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(v => v.Trim()));
-                    break;
-
-                case "TAGS":
-                    song.Tags.AddRange(headerValue.Split(new[] { ListSplitter }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(v => v.Trim()));
-                    break;
-
-                case "AUTHOR":
-                case "CREATOR":
-                    if (headerName == "AUTHOR")
-                    {
-                        song.AddAlert(AlertType.ParsingWarning, "#AUTHOR header is custom and should be replaced by #CREATOR", currentLine);
-                        fixedHeaderName = "CREATOR";
-                    }
-
-                    song.Creator = headerValue;
-                    break;
-
-                case "PROVIDEDBY":
-                    song.ProvidedBy = headerValue;
-                    break;
-
-                case "COMMENT":
-                    song.Comment = headerValue;
-                    break;
-
-                case "AUDIOURL":
-                    song.AudioUrl = headerValue;
-                    break;
-
-                case "VIDEOURL":
-                    song.VideoUrl = headerValue;
-                    break;
-
-                case "COVERURL":
-                    song.CoverUrl = headerValue;
-                    break;
-
-                case "BACKGROUNDURL":
-                    song.BackgroundUrl = headerValue;
-                    break;
-
-                case "RENDITION":
-                    song.Rendition = headerValue;
-                    break;
-
-                default:
-                    return false;
-            }
-
-            return true;
-        }
-
-        private static bool HandlePlayerHeaders(string headerName, string headerValue, Song song, HashSet<string> parsedHeaders, int currentLine)
-        {
-            var playerHeaderMatch = PlayerRegex.Match(headerName);
-            if (!playerHeaderMatch.Success)
-            {
-                return false;
-            }
-
-            var playerNumber = int.Parse(playerHeaderMatch.Groups["playerNumber"].Value, CultureInfo.InvariantCulture);
-
-            if (headerName.StartsWith("DUETSINGER"))
-            {
-                if (parsedHeaders.Contains($"P{playerNumber}"))
-                {
-                    song.AddAlert(AlertType.ParsingWarning, $"#{headerName} header can be removed since #P{playerNumber} header is present", currentLine);
-                    return true;
-                }
-
-                song.AddAlert(AlertType.ParsingWarning, $"#{headerName} header is deprecated and should be replaced by #P{playerNumber}", currentLine);
-            }
-
-            var player = song.Players.SingleOrDefault(p => p.Number == playerNumber);
-            if (player == null)
-            {
-                player = new SongPlayer { Number = playerNumber };
-                song.Players.Add(player);
-            }
-
-            player.Name = headerValue;
-            if (!parsedHeaders.Add(headerName))
-            {
-                song.AddAlert(AlertType.ParsingWarning, $"#{headerName} header is duplicated", currentLine);
-            }
-            return true;
-        }
-
-        #endregion
-
-        #region Notes
-
-        private static SongNote TryParseEndOfPhraseNote(SongNote lastParsedNote, string fileLine, int playerNumber, int currentLine)
-        {
-            var eolMatch = EolRegex.Match(fileLine);
-            if (!eolMatch.Success)
-            {
-                return null;
-            }
-
-            var note = new SongNote
-            {
-                FileLine = currentLine,
-                PlayerNumber = playerNumber,
-                Type = NoteType.EndOfPhrase,
-                StartBeat = -1,
-                Duration = null
-            };
-
-            if (eolMatch.Groups["startBeat"].Success)
-            {
-                note.StartBeat = int.Parse(eolMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture);
-            } 
-            else if (lastParsedNote != null)
-            {
-                var duration = 1;
-                if (lastParsedNote.Duration.HasValue)
-                {
-                    duration = lastParsedNote.Duration.Value;
-                }
-                note.StartBeat = lastParsedNote.StartBeat + duration - 1;
-            }
-            return note;
-        }
-
-        private static SongNote TryParseNote(string fileLine, int playerNumber, int currentLine)
-        {
-            var noteMatch = NoteRegex.Match(fileLine);
-            if (!noteMatch.Success)
-            {
-                return null;
-            }
-
-            return new SongNote
-            {
-                FileLine = currentLine,
-                PlayerNumber = playerNumber,
-                Type = ParseNoteType(noteMatch.Groups["noteType"].Value),
-                StartBeat = int.Parse(noteMatch.Groups["startBeat"].Value, CultureInfo.InvariantCulture),
-                Duration = int.Parse(noteMatch.Groups["duration"].Value, CultureInfo.InvariantCulture),
-                Pitch = int.Parse(noteMatch.Groups["pitch"].Value, CultureInfo.InvariantCulture),
-                Text = noteMatch.Groups["text"].Value
-            };
-        }
-
-        private static NoteType ParseNoteType(string noteType)
-        {
-            return noteType.ToUpperInvariant() switch
-            {
-                ":" => NoteType.Regular,
-                "*" => NoteType.Golden,
-                "R" => NoteType.Rap,
-                "G" => NoteType.GoldenRap,
-                _ => NoteType.Freestyle
-            };
-        }
-
-        #endregion
     }
 }

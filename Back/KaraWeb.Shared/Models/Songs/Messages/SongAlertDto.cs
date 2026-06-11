@@ -11,6 +11,11 @@ namespace KaraWeb.Shared.Models.Songs.Messages
         public AlertType Type { get; set; }
 
         /// <summary>
+        /// The level of the alert
+        /// </summary>
+        public AlertLevel Level { get; set; }
+
+        /// <summary>
         ///     The message of the alert
         /// </summary>
         public string Message { get; set; }

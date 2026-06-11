@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using KaraWeb.Shared.Models.Songs.Players;
 using Microsoft.EntityFrameworkCore;
 
-namespace KaraWeb.Core.Persistence.Songs
+namespace KaraWeb.Core.Persistence.Models.Songs
 {
     [Table("SongPlayers")]
     [PrimaryKey(nameof(SongId), nameof(Number))]

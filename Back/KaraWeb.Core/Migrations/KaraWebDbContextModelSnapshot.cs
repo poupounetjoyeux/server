@@ -21,7 +21,7 @@ namespace KaraWeb.Core.Migrations
                 .HasAnnotation("Proxies:CheckEquality", false)
                 .HasAnnotation("Proxies:LazyLoading", true);
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Libraries.Library", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Libraries.Library", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -51,7 +51,7 @@ namespace KaraWeb.Core.Migrations
                     b.ToTable("Libraries");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.Song", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.Song", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -77,7 +77,7 @@ namespace KaraWeb.Core.Migrations
                     b.Property<string>("BackgroundUrl")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("Bpm")
+                    b.Property<decimal>("Bpm")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Comment")
@@ -89,22 +89,17 @@ namespace KaraWeb.Core.Migrations
                     b.Property<string>("CoverUrl")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Creator")
-                        .HasMaxLength(500)
+                    b.PrimitiveCollection<string>("Creators")
                         .HasColumnType("TEXT");
 
                     b.PrimitiveCollection<string>("Editions")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Encoding")
-                        .HasMaxLength(25)
-                        .HasColumnType("TEXT");
+                    b.Property<double?>("End")
+                        .HasColumnType("REAL");
 
-                    b.Property<decimal?>("End")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal?>("Gap")
-                        .HasColumnType("TEXT");
+                    b.Property<double?>("Gap")
+                        .HasColumnType("REAL");
 
                     b.PrimitiveCollection<string>("Genres")
                         .HasColumnType("TEXT");
@@ -121,17 +116,11 @@ namespace KaraWeb.Core.Migrations
                     b.Property<Guid>("LibraryId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("MedleyEnd")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("MedleyStart")
-                        .HasColumnType("INTEGER");
-
                     b.PrimitiveCollection<string>("NotManagedHeaders")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("PreviewStart")
-                        .HasColumnType("TEXT");
+                    b.Property<double?>("PreviewStart")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("ProvidedBy")
                         .HasColumnType("TEXT");
@@ -144,8 +133,8 @@ namespace KaraWeb.Core.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("Start")
-                        .HasColumnType("TEXT");
+                    b.Property<double?>("Start")
+                        .HasColumnType("REAL");
 
                     b.PrimitiveCollection<string>("Tags")
                         .HasColumnType("TEXT");
@@ -155,14 +144,13 @@ namespace KaraWeb.Core.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Version")
-                        .HasMaxLength(6)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Video")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("VideoGap")
-                        .HasColumnType("TEXT");
+                    b.Property<double?>("VideoGap")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("VideoUrl")
                         .HasColumnType("TEXT");
@@ -180,13 +168,16 @@ namespace KaraWeb.Core.Migrations
                     b.ToTable("Songs");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongAlert", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongAlert", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("FileLine")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Level")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Message")
@@ -206,7 +197,23 @@ namespace KaraWeb.Core.Migrations
                     b.ToTable("SongAlerts");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongNote", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongMedley", b =>
+                {
+                    b.Property<Guid>("SongId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("MedleyEnd")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MedleyStart")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("SongId");
+
+                    b.ToTable("SongMedleys");
+                });
+
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongNote", b =>
                 {
                     b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
@@ -239,7 +246,7 @@ namespace KaraWeb.Core.Migrations
                     b.ToTable("SongNotes");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongPlayer", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongPlayer", b =>
                 {
                     b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
@@ -257,9 +264,9 @@ namespace KaraWeb.Core.Migrations
                     b.ToTable("SongPlayers");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.Song", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.Song", b =>
                 {
-                    b.HasOne("KaraWeb.Core.Persistence.Libraries.Library", "Library")
+                    b.HasOne("KaraWeb.Core.Persistence.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -268,9 +275,9 @@ namespace KaraWeb.Core.Migrations
                     b.Navigation("Library");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongAlert", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongAlert", b =>
                 {
-                    b.HasOne("KaraWeb.Core.Persistence.Songs.Song", "Song")
+                    b.HasOne("KaraWeb.Core.Persistence.Models.Songs.Song", "Song")
                         .WithMany("Alerts")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -279,9 +286,20 @@ namespace KaraWeb.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongNote", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongMedley", b =>
                 {
-                    b.HasOne("KaraWeb.Core.Persistence.Songs.Song", "Song")
+                    b.HasOne("KaraWeb.Core.Persistence.Models.Songs.Song", "Song")
+                        .WithOne("Medley")
+                        .HasForeignKey("KaraWeb.Core.Persistence.Models.Songs.SongMedley", "SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Song");
+                });
+
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongNote", b =>
+                {
+                    b.HasOne("KaraWeb.Core.Persistence.Models.Songs.Song", "Song")
                         .WithMany("Notes")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -290,9 +308,9 @@ namespace KaraWeb.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.SongPlayer", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.SongPlayer", b =>
                 {
-                    b.HasOne("KaraWeb.Core.Persistence.Songs.Song", "Song")
+                    b.HasOne("KaraWeb.Core.Persistence.Models.Songs.Song", "Song")
                         .WithMany("Players")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -301,9 +319,11 @@ namespace KaraWeb.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraWeb.Core.Persistence.Songs.Song", b =>
+            modelBuilder.Entity("KaraWeb.Core.Persistence.Models.Songs.Song", b =>
                 {
                     b.Navigation("Alerts");
+
+                    b.Navigation("Medley");
 
                     b.Navigation("Notes");
 

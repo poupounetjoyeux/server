@@ -6,9 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using KaraWeb.Core.Persistence;
-using KaraWeb.Core.Persistence.Songs;
+using KaraWeb.Core.Persistence.Models.Songs;
 using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Files;
+using KaraWeb.Shared.Models.Songs.Messages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -30,10 +31,12 @@ namespace KaraWeb.Host.Providers.Songs
         {
             await foreach (var song in _dbContext.Songs
                                .Where(s => s.LibraryId == libraryId)
+                               .OrderBy(s => s.Artist)
+                               .ThenBy(s => s.Title)
                                .ToAsyncEnumerable().WithCancellation(cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!withErrors && song.Alerts.Any(a => a.IsError))
+                if (!withErrors && song.Alerts.Any(a => a.Level == AlertLevel.Error))
                 {
                     continue;
                 }

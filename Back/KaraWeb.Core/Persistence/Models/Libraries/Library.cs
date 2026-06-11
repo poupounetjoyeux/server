@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using KaraWeb.Shared.Models.Libraries;
 
-namespace KaraWeb.Core.Persistence.Libraries
+namespace KaraWeb.Core.Persistence.Models.Libraries
 {
     [Table("Libraries")]
     public class Library

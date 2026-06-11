@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using KaraWeb.Core.Persistence.Songs;
+using KaraWeb.Core.Persistence.Models.Songs;
 using KaraWeb.Shared.Models.Songs;
 using KaraWeb.Shared.Models.Songs.Files;
 using Microsoft.AspNetCore.Mvc;

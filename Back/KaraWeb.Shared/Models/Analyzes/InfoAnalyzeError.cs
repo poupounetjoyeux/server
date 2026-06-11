@@ -1,8 +1,8 @@
 ﻿namespace KaraWeb.Shared.Models.Analyzes
 {
-    public sealed class HeaderAnalyzeError
+    public sealed class InfoAnalyzeError
     {
-        public HeaderAnalyzeError(string message, bool isWarning = false)
+        public InfoAnalyzeError(string message, bool isWarning = false)
         {
             Message = message;
             IsWarning = isWarning;
