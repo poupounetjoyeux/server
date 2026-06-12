@@ -16,6 +16,5 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
 		<PackageReference Include="Quartz" />
-		<PackageReference Include="System.Text.Encoding.CodePages" />
 	</ItemGroup>
 </Project>

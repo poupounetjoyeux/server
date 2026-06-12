@@ -1,5 +1,5 @@
 using System;
-using KaraWeb.Core.Helper;
+using KaraWeb.Shared.Helpers;
 using NUnit.Framework;
 
 namespace KaraWeb.Tests.Helpers
