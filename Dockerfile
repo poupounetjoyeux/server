@@ -4,24 +4,19 @@ EXPOSE 7373
 
 ARG UUID=1001
 ARG GUID=1001
-RUN groupadd -g $GUID -o karaweb
-RUN useradd -m -u $UUID -g $GUID -o -s /bin/bash karaweb
+RUN groupadd -g $GUID -o KaraWeb
+RUN useradd -m -u $UUID -g $GUID -o -s /bin/bash KaraWeb
 
-RUN mkdir /app
-RUN chown karaweb:karaweb /app
-
-USER karaweb:karaweb
-
-RUN mkdir /home/karaweb/src
-
-RUN mkdir /home/karaweb/src/Back
-WORKDIR /home/karaweb/src/Back
-COPY Host/* .
+COPY Back/ /KaraWebSrc/Back/
+WORKDIR /KaraWebSrc/Back
 RUN dotnet build --configuration Release
 
+RUN mkdir /app
 WORKDIR /app
-RUN mv /home/mediasaccess/src/bin/Release/* ./
+RUN mv /KaraWebSrc/bin/Release/* ./
+RUN chown -R KaraWeb:KaraWeb /app
 
-RUN rm -r /home/karaweb/src
+RUN rm -r /KaraWebSrc
 
+USER $UUID:$GUID
 ENTRYPOINT ["dotnet", "run", "KaraWeb.dll"]
