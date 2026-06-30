@@ -1,5 +1,26 @@
 name: Release
 
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+        description: The version of the release (X.Y.Z or auto)
+        default: auto
+      stable:
+        required: true
+        type: boolean
+        default: true
+      title:
+        required: false
+        type: string
+        description: An optional release title
+      message:
+        required: false
+        type: string
+        description: An optional release message
+        
 jobs:
   release:
 
