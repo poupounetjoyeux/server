@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace KaraWeb.Server.Host.Helpers
+namespace KaraW3B.Server.Host.Helpers
 {
     public static class KaraW3BApiConstants
     {

@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
-namespace KaraWeb.Server.Host.Providers.Songs
+namespace KaraW3B.Server.Host.Providers.Songs
 {
     internal sealed class SongsProvider : ISongsProvider
     {

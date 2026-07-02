@@ -8,12 +8,12 @@ using KaraW3B.SDK.Models.Songs;
 using KaraW3B.SDK.Models.Songs.Files;
 using KaraW3B.SDK.Models.Songs.Messages;
 using KaraW3B.SDK.Models.Songs.Notes;
-using KaraWeb.Server.Host.Providers.Songs;
+using KaraW3B.Server.Host.Providers.Songs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace KaraWeb.Server.Host.Controllers
+namespace KaraW3B.Server.Host.Controllers
 {
     [Route(Name)]
     public sealed class SongsController : ControllerBase

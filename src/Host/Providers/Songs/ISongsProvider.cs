@@ -7,7 +7,7 @@ using KaraW3B.SDK.Models.Songs.Files;
 using KaraW3B.Server.Core.Persistence.Models.Songs;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KaraWeb.Server.Host.Providers.Songs
+namespace KaraW3B.Server.Host.Providers.Songs
 {
     public interface ISongsProvider
     {

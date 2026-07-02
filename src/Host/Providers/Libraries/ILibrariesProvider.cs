@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using KaraW3B.SDK.Models.Libraries;
 using KaraW3B.Server.Core.Persistence.Models.Libraries;
 
-namespace KaraWeb.Server.Host.Providers.Libraries
+namespace KaraW3B.Server.Host.Providers.Libraries
 {
     public interface ILibrariesProvider
     {

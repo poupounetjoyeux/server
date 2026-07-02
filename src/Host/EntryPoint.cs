@@ -3,14 +3,14 @@ using System.Reflection;
 using System.Threading.Tasks;
 using KaraW3B.SDK.Helpers;
 using KaraW3B.Server.Core.Persistence;
-using KaraWeb.Server.Host.Helpers;
+using KaraW3B.Server.Host.Helpers;
 using log4net;
 using log4net.Config;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace KaraWeb.Server.Host
+namespace KaraW3B.Server.Host
 {
     internal sealed class EntryPoint
     {

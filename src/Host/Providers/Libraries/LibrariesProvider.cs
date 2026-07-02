@@ -13,7 +13,7 @@ using KaraW3B.Server.Core.Services.SongParser;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 
-namespace KaraWeb.Server.Host.Providers.Libraries
+namespace KaraW3B.Server.Host.Providers.Libraries
 {
     internal sealed class LibrariesProvider : ILibrariesProvider
     {

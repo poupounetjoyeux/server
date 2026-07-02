@@ -8,17 +8,17 @@ using KaraW3B.Server.Core;
 using KaraW3B.Server.Core.Persistence;
 using KaraW3B.Server.Core.Services.SchedulerService;
 using KaraW3B.Server.Core.Services.SongParser;
-using KaraWeb.Server.Host.Conventions;
-using KaraWeb.Server.Host.Helpers;
-using KaraWeb.Server.Host.Providers.Libraries;
-using KaraWeb.Server.Host.Providers.Songs;
-using KaraWeb.Server.Host.Swagger;
+using KaraW3B.Server.Host.Conventions;
+using KaraW3B.Server.Host.Helpers;
+using KaraW3B.Server.Host.Providers.Libraries;
+using KaraW3B.Server.Host.Providers.Songs;
+using KaraW3B.Server.Host.Swagger;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 
-namespace KaraWeb.Server.Host
+namespace KaraW3B.Server.Host
 {
     internal sealed class Startup
     {
