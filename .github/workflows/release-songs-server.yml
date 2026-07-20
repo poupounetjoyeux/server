@@ -7,7 +7,7 @@ on:
 
 jobs: 
   release:
-    if: github.repository == 'KaraW3B/servers'
+    if: github.repository == 'KaraW3B/songs-server'
     runs-on: ubuntu-latest
     
     permissions:
@@ -34,20 +34,19 @@ jobs:
       
       - name: Restore dependencies
         run: dotnet restore
-        working-directory: src/Songs
+        working-directory: src
       
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ env.releaseVersion }} -p:AssemblyVersion=${{ env.releaseVersion }} -p:FileVersion=${{ env.releaseVersion }}
-        working-directory: src/Songs
+        working-directory: src
         
       - name: Packing NuGets
         run: dotnet pack --configuration Release --no-build --version ${{ env.releaseVersion }}
-        working-directory: src/Songs
+        working-directory: src
 
       - name: Publish NuGets
         env:
           GIT_NUGET_API_KEY: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: src/Songs
         run: |
           dotnet nuget push "bin/Release/*.nupkg" --source https://nuget.pkg.github.com/KaraW3B/index.json --api-key $GIT_NUGET_API_KEY
 
@@ -72,7 +71,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v7.3.0
         with:
-          context: ./src/Songs/
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

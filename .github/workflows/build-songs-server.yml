@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    if: github.repository == 'KaraW3B/servers'
+    if: github.repository == 'KaraW3B/songs-server'
     runs-on: ubuntu-latest
 
     steps:
@@ -26,13 +26,13 @@ jobs:
       run: dotnet nuget add source https://nuget.pkg.github.com/KaraW3B/index.json --name "KaraW3B-github" --username KaraW3B --password $GIT_NUGET_API_KEY --store-password-in-clear-text
     - name: Restore dependencies
       run: dotnet restore
-      working-directory: src/Songs
+      working-directory: src
     - name: Build
       run: dotnet build --no-restore --configuration Release
-      working-directory: src/Songs
+      working-directory: src
     - name: Test
       run: dotnet test --no-build
-      working-directory: src/Songs
+      working-directory: src
       
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4.1.0
@@ -40,7 +40,7 @@ jobs:
     - name: Build Docker image
       uses: docker/build-push-action@v7.3.0
       with:
-        context: ./src/Songs/
+        context: .
         push: false
         tags: karaw3b/songs-server:pr
         cache-from: type=gha

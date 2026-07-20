@@ -5,7 +5,7 @@
 		<AssemblyName>KaraW3B.Server.Songs.Host</AssemblyName>
 		<StartupObject>KaraW3B.Server.Songs.Host.EntryPoint</StartupObject>
 		<ConfigFilesNeeded>true</ConfigFilesNeeded>
-		<ApplicationIcon>$(MSBuildThisFileDirectory)../../icon.ico</ApplicationIcon>
+		<ApplicationIcon>$(MSBuildThisFileDirectory)../icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>

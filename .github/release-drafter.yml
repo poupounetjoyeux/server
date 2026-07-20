@@ -1,4 +1,4 @@
-name-template: "🎤 Servers v$RESOLVED_VERSION"
+name-template: "🎤 Songs server v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
 categories:
   - title: 🚀 Features
