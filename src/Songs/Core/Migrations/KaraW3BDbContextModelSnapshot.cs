@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace KaraW3B.Core.Migrations
+namespace KaraW3B.Server.Songs.Core.Migrations
 {
     [DbContext(typeof(KaraW3BDbContext))]
     partial class KaraW3BDbContextModelSnapshot : ModelSnapshot
@@ -21,7 +21,7 @@ namespace KaraW3B.Core.Migrations
                 .HasAnnotation("Proxies:CheckEquality", false)
                 .HasAnnotation("Proxies:LazyLoading", true);
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Libraries.Library", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Libraries.DbLibrary", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -48,10 +48,10 @@ namespace KaraW3B.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Libraries", (string)null);
+                    b.ToTable("Libraries");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.Song", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -67,6 +67,9 @@ namespace KaraW3B.Core.Migrations
 
                     b.Property<string>("Audio")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("AudioConversion")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AudioUrl")
                         .HasColumnType("TEXT");
@@ -106,6 +109,9 @@ namespace KaraW3B.Core.Migrations
 
                     b.Property<string>("Instrumental")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("InstrumentalConversion")
+                        .HasColumnType("INTEGER");
 
                     b.PrimitiveCollection<string>("Languages")
                         .HasColumnType("TEXT");
@@ -152,6 +158,9 @@ namespace KaraW3B.Core.Migrations
                     b.Property<string>("Video")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("VideoConversion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double?>("VideoGap")
                         .HasColumnType("REAL");
 
@@ -161,6 +170,9 @@ namespace KaraW3B.Core.Migrations
                     b.Property<string>("Vocals")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("VocalsConversion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("Year")
                         .HasColumnType("INTEGER");
 
@@ -168,10 +180,10 @@ namespace KaraW3B.Core.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("Songs", (string)null);
+                    b.ToTable("Songs");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongAlert", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongAlert", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -197,10 +209,10 @@ namespace KaraW3B.Core.Migrations
 
                     b.HasIndex("SongId");
 
-                    b.ToTable("SongAlerts", (string)null);
+                    b.ToTable("SongAlerts");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongNote", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongNote", b =>
                 {
                     b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
@@ -209,6 +221,9 @@ namespace KaraW3B.Core.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("Duration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("NoteType")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("Pitch")
@@ -223,17 +238,14 @@ namespace KaraW3B.Core.Migrations
                     b.Property<string>("Text")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("SongId", "FileLine");
 
                     b.HasIndex("PlayerNumber");
 
-                    b.ToTable("SongNotes", (string)null);
+                    b.ToTable("SongNotes");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongPlayer", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongPlayer", b =>
                 {
                     b.Property<Guid>("SongId")
                         .HasColumnType("TEXT");
@@ -248,12 +260,12 @@ namespace KaraW3B.Core.Migrations
 
                     b.HasKey("SongId", "Number");
 
-                    b.ToTable("SongPlayers", (string)null);
+                    b.ToTable("SongPlayers");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.Song", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", b =>
                 {
-                    b.HasOne("KaraW3B.Core.Persistence.Models.Libraries.Library", "Library")
+                    b.HasOne("KaraW3B.Server.Songs.Core.Persistence.Models.Libraries.DbLibrary", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -262,9 +274,9 @@ namespace KaraW3B.Core.Migrations
                     b.Navigation("Library");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongAlert", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongAlert", b =>
                 {
-                    b.HasOne("KaraW3B.Core.Persistence.Models.Songs.Song", "Song")
+                    b.HasOne("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", "Song")
                         .WithMany("Alerts")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -273,9 +285,9 @@ namespace KaraW3B.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongNote", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongNote", b =>
                 {
-                    b.HasOne("KaraW3B.Core.Persistence.Models.Songs.Song", "Song")
+                    b.HasOne("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", "Song")
                         .WithMany("Notes")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -284,9 +296,9 @@ namespace KaraW3B.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.SongPlayer", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSongPlayer", b =>
                 {
-                    b.HasOne("KaraW3B.Core.Persistence.Models.Songs.Song", "Song")
+                    b.HasOne("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", "Song")
                         .WithMany("Players")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -295,7 +307,7 @@ namespace KaraW3B.Core.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("KaraW3B.Core.Persistence.Models.Songs.Song", b =>
+            modelBuilder.Entity("KaraW3B.Server.Songs.Core.Persistence.Models.Songs.DbSong", b =>
                 {
                     b.Navigation("Alerts");
 

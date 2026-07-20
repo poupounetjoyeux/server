@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace KaraW3B.Core.Migrations
+namespace KaraW3B.Server.Songs.Core.Migrations
 {
     /// <inheritdoc />
     public partial class InitializeDatabase : Migration
@@ -65,7 +65,11 @@ namespace KaraW3B.Core.Migrations
                     NotManagedHeaders = table.Column<string>(type: "TEXT", nullable: true),
                     SongFilePath = table.Column<string>(type: "TEXT", nullable: false),
                     AnalyzedFileHash = table.Column<string>(type: "TEXT", nullable: false),
-                    LastParseTime = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    LastParseTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    VideoConversion = table.Column<int>(type: "INTEGER", nullable: false),
+                    AudioConversion = table.Column<int>(type: "INTEGER", nullable: false),
+                    VocalsConversion = table.Column<int>(type: "INTEGER", nullable: false),
+                    InstrumentalConversion = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -106,7 +110,7 @@ namespace KaraW3B.Core.Migrations
                 {
                     FileLine = table.Column<int>(type: "INTEGER", nullable: false),
                     SongId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    NoteType = table.Column<int>(type: "INTEGER", nullable: false),
                     PlayerNumber = table.Column<int>(type: "INTEGER", nullable: false),
                     StartBeat = table.Column<int>(type: "INTEGER", nullable: false),
                     Duration = table.Column<int>(type: "INTEGER", nullable: true),
