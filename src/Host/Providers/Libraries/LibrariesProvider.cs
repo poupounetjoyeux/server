@@ -9,6 +9,7 @@ using KaraW3B.Server.Songs.Core.Persistence;
 using KaraW3B.Server.Songs.Core.Persistence.Models.Libraries;
 using KaraW3B.Server.Songs.Core.Services.FFmpeg;
 using KaraW3B.Server.Songs.Core.Services.Scheduler;
+using KaraW3B.Server.Songs.Core.Services.Settings;
 using KaraW3B.Server.Songs.Core.Services.SongFileInterpreter;
 using KaraW3B.Server.Songs.Models.Libraries;
 using Microsoft.EntityFrameworkCore;
@@ -20,17 +21,21 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
     {
         private readonly KaraW3BDbContext _dbContext;
         private readonly ISongFileInterpreterService _songFileInterpreterService;
-        private readonly ISchedulerService _schedulerService;
         private readonly IFFmpegService _ffmpegService;
+        private readonly ApiScheduler _scheduler;
 
-        public LibrariesProvider(KaraW3BDbContext dbContext,
+        public LibrariesProvider(ISettingsService settingsService, KaraW3BDbContext dbContext,
             ISongFileInterpreterService songFileInterpreterService, ISchedulerService schedulerService, IFFmpegService ffmpegService)
         {
             _dbContext = dbContext;
             _songFileInterpreterService = songFileInterpreterService;
-            _schedulerService = schedulerService;
             _ffmpegService = ffmpegService;
             ReinitAnalyzingFlags();
+
+            _scheduler = schedulerService.RegisterSchedulerAsync("Libraries",
+                    settingsService.Settings.ConcurrencySettings.MaxLibraryAnalyzesConcurrency, CancellationToken.None)
+                .Result;
+            _scheduler.RegisterJobAsync<AnalyzeLibraryJob>(AnalyzeLibraryJob.JobKey, CancellationToken.None).Wait();
         }
 
         private void ReinitAnalyzingFlags()
@@ -85,7 +90,7 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
             return deleteCount > 0;
         }
 
-        public Task StartLibraryAnalyzeAsync(DbLibrary library, LibraryAnalyzeType analyzeType,
+        public async Task StartLibraryAnalyzeAsync(DbLibrary library, LibraryAnalyzeType analyzeType,
             CancellationToken cancellationToken)
         {
             var dataMap = new JobDataMap
@@ -95,7 +100,7 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
                 [AnalyzeLibraryJob.SongParserServiceKey] = _songFileInterpreterService,
                 [AnalyzeLibraryJob.FFmpegServiceKey] = _ffmpegService
             };
-            return _schedulerService.StartJob(AnalyzeLibraryJob.JobKey, dataMap, cancellationToken);
+            await _scheduler.StartJob(AnalyzeLibraryJob.JobKey, dataMap, cancellationToken);
         }
     }
 }

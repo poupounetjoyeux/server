@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using KaraW3B.Server.Songs.Core.Helpers;
-using KaraW3B.Server.Songs.Core.Persistence.Models.Songs;
 using KaraW3B.Server.Songs.Core.Services.FFmpeg;
 using KaraW3B.Server.Songs.Models.Songs;
 using log4net;
@@ -19,7 +18,7 @@ namespace KaraW3B.Server.Songs.Core.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            if (context.MergedJobDataMap[SongKey] is not DbSong song)
+            if (context.MergedJobDataMap[SongKey] is not Song song)
             {
                 _logger.Error("Unable to retrieve a valid song from job context");
                 return;

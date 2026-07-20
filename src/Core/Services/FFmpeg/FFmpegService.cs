@@ -1,11 +1,15 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using FFMpegCore;
+﻿using FFMpegCore;
 using FFMpegCore.Arguments;
 using FFMpegCore.Enums;
 using KaraW3B.Server.Songs.Core.Helpers;
 using KaraW3B.Server.Songs.Core.Models;
 using KaraW3B.Server.Songs.Core.Services.Settings;
+using Quartz;
+using System.Threading;
+using System.Threading.Tasks;
+using KaraW3B.Server.Songs.Core.Jobs;
+using KaraW3B.Server.Songs.Core.Services.Scheduler;
+using KaraW3B.Server.Songs.Models.Songs;
 
 namespace KaraW3B.Server.Songs.Core.Services.FFmpeg
 {
@@ -13,16 +17,21 @@ namespace KaraW3B.Server.Songs.Core.Services.FFmpeg
     {
         private const string EncodedByTag = "encoded_by";
 
-        public FFmpegService(ISettingsService settingsService)
+        private readonly ApiScheduler _scheduler;
+
+        public FFmpegService(ISettingsService settingsService, ISchedulerService schedulerService)
         {
-            var customFFmpegPath = settingsService.GetSettingsAsync(CancellationToken.None).Result.FFmpegPath;
+            var customFFmpegPath = settingsService.Settings.FFmpegPath;
             if (!string.IsNullOrEmpty(customFFmpegPath))
             {
                 GlobalFFOptions.Configure(options => options.BinaryFolder = customFFmpegPath);
             }
+
+            _scheduler = schedulerService.RegisterSchedulerAsync("Transcoder", settingsService.Settings.ConcurrencySettings.MaxConversionConcurrency, CancellationToken.None).Result;
+            _scheduler.RegisterJobAsync<TranscodeJob>(TranscodeJob.JobKey, CancellationToken.None).Wait();
         }
 
-        public async Task<ConversionStatus> GetVideoCompatibility(string videoPath, CancellationToken cancellationToken)
+        public async Task<ConversionStatus> GetVideoCompatibilityAsync(string videoPath, CancellationToken cancellationToken)
         {
             var mediaInfos = await FFProbe.AnalyseAsync(videoPath, cancellationToken: cancellationToken);
 
@@ -56,7 +65,7 @@ namespace KaraW3B.Server.Songs.Core.Services.FFmpeg
             return ConversionStatus.Compatible;
         }
 
-        public async Task<ConversionStatus> GetAudioCompatibility(string audioPath, CancellationToken cancellationToken)
+        public async Task<ConversionStatus> GetAudioCompatibilityAsync(string audioPath, CancellationToken cancellationToken)
         {
             var mediaInfos = await FFProbe.AnalyseAsync(audioPath, cancellationToken: cancellationToken);
 
@@ -83,6 +92,17 @@ namespace KaraW3B.Server.Songs.Core.Services.FFmpeg
             }
 
             return ConversionStatus.Compatible;
+        }
+
+        public async Task EnqueueTranscodeAsync(Song song, FileType fileType, CancellationToken cancellationToken)
+        {
+            var dataMap = new JobDataMap
+            {
+                [TranscodeJob.SongKey] = song,
+                [TranscodeJob.FileTypeKey] = fileType,
+                [TranscodeJob.FFmpegServiceKey] = this
+            };
+            await _scheduler.StartJob(AnalyzeLibraryJob.JobKey, dataMap, cancellationToken);
         }
 
         private class MovFlagsArgument : IArgument

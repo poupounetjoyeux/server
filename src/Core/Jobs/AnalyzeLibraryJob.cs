@@ -30,6 +30,7 @@ namespace KaraW3B.Server.Songs.Core.Jobs
         public const string LibraryKey = "library";
         public const string AnalyzeTypeKey = "analyze_type";
         public const string SongParserServiceKey = "song_parser_service";
+        public const string MaxParallelismKey = "max_parallelism";
         public const string FFmpegServiceKey = "FFmpeg_service";
 
         public async Task Execute(IJobExecutionContext context)
@@ -49,6 +50,12 @@ namespace KaraW3B.Server.Songs.Core.Jobs
             if (context.MergedJobDataMap[SongParserServiceKey] is not ISongFileInterpreterService songParserService)
             {
                 _logger.Error("Unable to retrieve a valid song parser service from job context");
+                return;
+            }
+
+            if (context.MergedJobDataMap[MaxParallelismKey] is not int maxParallelism)
+            {
+                _logger.Error("Unable to retrieve a valid max parallelism value from job context");
                 return;
             }
 
@@ -85,8 +92,11 @@ namespace KaraW3B.Server.Songs.Core.Jobs
             _logger.Info($"Found {foundFiles.Length} potential song file(s) to analyze");
 
             var parsedSongIds = new ConcurrentBag<Guid>();
-            await Parallel.ForEachAsync(foundFiles, context.CancellationToken,
-                (f, c) => ProcessSongFile(songParserService, ffmpegService, library.Id, analyzeType, parsedSongIds, f, c));
+            await Parallel.ForEachAsync(foundFiles,
+                new ParallelOptions
+                    { CancellationToken = context.CancellationToken, MaxDegreeOfParallelism = maxParallelism },
+                (f, c) => ProcessSongFile(songParserService, ffmpegService, library.Id, analyzeType, parsedSongIds, f,
+                    c));
 
             var songsToDelete =
                 await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id))
@@ -223,12 +233,12 @@ namespace KaraW3B.Server.Songs.Core.Jobs
             ConversionStatus conversionStatus;
             if (fileType == FileType.Video)
             {
-                conversionStatus = await ffmpegService.GetVideoCompatibility(filePath, cancellationToken);
+                conversionStatus = await ffmpegService.GetVideoCompatibilityAsync(filePath, cancellationToken);
                 song.VideoConversion = conversionStatus;
             }
             else
             {
-                conversionStatus = await ffmpegService.GetAudioCompatibility(filePath, cancellationToken);
+                conversionStatus = await ffmpegService.GetAudioCompatibilityAsync(filePath, cancellationToken);
                 switch (fileType)
                 {
                     case FileType.Audio:

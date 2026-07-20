@@ -14,6 +14,11 @@
         public string FFmpegPath { get; set; }
 
         /// <summary>
+        /// Settings related to threads limits
+        /// </summary>
+        public ConcurrencySettings ConcurrencySettings { get; set; } = new();
+
+        /// <summary>
         /// Settings related to the conversion of video files
         /// </summary>
         public ConversionSettings VideoConversion { get; set; } = new();
@@ -22,5 +27,17 @@
         /// Settings related to the conversion of audio files
         /// </summary>
         public ConversionSettings AudioConversion { get; set; } = new();
+
+        public KaraW3BSettings Clone()
+        {
+            return new KaraW3BSettings
+            {
+                FFmpegPath = FFmpegPath,
+                SwaggerEnabled = SwaggerEnabled,
+                AudioConversion = AudioConversion?.Clone() ?? new ConversionSettings(),
+                VideoConversion = VideoConversion?.Clone() ?? new ConversionSettings(),
+                ConcurrencySettings = ConcurrencySettings?.Clone() ?? new ConcurrencySettings()
+            };
+        }
     }
 }

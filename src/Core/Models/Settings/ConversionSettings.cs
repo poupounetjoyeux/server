@@ -12,14 +12,13 @@
         /// </summary>
         public ConversionStatus Threshold { get; set; } = ConversionStatus.Mandatory;
 
-        /// <summary>
-        /// A flag to enable/disable conversion directly after library analyze
-        /// </summary>
-        public bool AfterLibraryAnalyze { get; set; } = true;
-
-        /// <summary>
-        /// A CRON to run conversion jobs regularly
-        /// </summary>
-        public string Cron { get; set; }
+        public ConversionSettings Clone()
+        {
+            return new ConversionSettings
+            {
+                Enabled = true,
+                Threshold = Threshold
+            };
+        }
     }
 }
