@@ -1,0 +1,71 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11822.322
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{88D2EF2C-8E19-4B31-8684-BBA4303B47FD}"
+	ProjectSection(SolutionItems) = preProject
+		nuget.config = nuget.config
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KaraW3B.Server.Songs.Core", "Songs\Core\KaraW3B.Server.Songs.Core.csproj", "{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KaraW3B.Server.Songs.Host", "Songs\Host\KaraW3B.Server.Songs.Host.csproj", "{BEBAA699-8747-ED4D-8BAA-6C99F6346023}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KaraW3B.Server.Songs.Tests", "Songs\Tests\KaraW3B.Server.Songs.Tests.csproj", "{59E26DA3-555B-A917-421E-35AA441338BC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Songs", "Songs", "{C9C1D9D3-298E-4BA9-BD29-30EBD749A676}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KaraW3B.Server.Songs.Models", "Songs\Models\KaraW3B.Server.Songs.Models.csproj", "{E07A8D87-C034-9CB9-3F7D-14010231C320}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KaraW3B.Client.Songs", "Songs\Client\KaraW3B.Client.Songs.csproj", "{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C2DCE6B1-4114-4F70-BAB9-3E772B1D46E1}"
+	ProjectSection(SolutionItems) = preProject
+		Songs\Directory.Build.props = Songs\Directory.Build.props
+		Songs\Directory.Packages.props = Songs\Directory.Packages.props
+		Songs\Dockerfile = Songs\Dockerfile
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEBAA699-8747-ED4D-8BAA-6C99F6346023}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEBAA699-8747-ED4D-8BAA-6C99F6346023}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEBAA699-8747-ED4D-8BAA-6C99F6346023}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEBAA699-8747-ED4D-8BAA-6C99F6346023}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59E26DA3-555B-A917-421E-35AA441338BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59E26DA3-555B-A917-421E-35AA441338BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59E26DA3-555B-A917-421E-35AA441338BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59E26DA3-555B-A917-421E-35AA441338BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E07A8D87-C034-9CB9-3F7D-14010231C320}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E07A8D87-C034-9CB9-3F7D-14010231C320}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E07A8D87-C034-9CB9-3F7D-14010231C320}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E07A8D87-C034-9CB9-3F7D-14010231C320}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C052FF31-A0CF-5C59-EC9C-ECC5BA5B0C7A} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+		{BEBAA699-8747-ED4D-8BAA-6C99F6346023} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+		{59E26DA3-555B-A917-421E-35AA441338BC} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+		{E07A8D87-C034-9CB9-3F7D-14010231C320} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+		{DA14CB73-6001-5065-8B9B-AF8F01FE4EE4} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+		{C2DCE6B1-4114-4F70-BAB9-3E772B1D46E1} = {C9C1D9D3-298E-4BA9-BD29-30EBD749A676}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4588A8A0-9C49-4396-9A96-8B7C3EC70A5E}
+	EndGlobalSection
+EndGlobal

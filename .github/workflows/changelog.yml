@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   draft-changelog:
-    if: github.repository == 'KaraW3B/server'
+    if: github.repository == 'KaraW3B/servers'
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@v7

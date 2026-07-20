@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<RootNamespace>KaraW3B.Client.Songs</RootNamespace>
+		<AssemblyName>KaraW3B.Client.Songs</AssemblyName>
+		<PackageId>KaraW3B.Client.Songs</PackageId>
+		<IsPackable>True</IsPackable>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Models\KaraW3B.Server.Songs.Models.csproj" />
+	</ItemGroup>
+</Project>

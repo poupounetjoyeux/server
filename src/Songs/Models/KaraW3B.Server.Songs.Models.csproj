@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<RootNamespace>KaraW3B.Server.Songs.Models</RootNamespace>
+		<AssemblyName>KaraW3B.Server.Songs.Models</AssemblyName>
+		<PackageId>KaraW3B.Server.Songs.Models</PackageId>
+		<IsPackable>True</IsPackable>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+</Project>

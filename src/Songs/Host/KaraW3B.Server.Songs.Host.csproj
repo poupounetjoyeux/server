@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>KaraW3B.Server.Songs.Host</RootNamespace>
+		<AssemblyName>KaraW3B.Server.Songs.Host</AssemblyName>
+		<StartupObject>KaraW3B.Server.Songs.Host.EntryPoint</StartupObject>
+		<ConfigFilesNeeded>true</ConfigFilesNeeded>
+		<ApplicationIcon>$(MSBuildThisFileDirectory)../../icon.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Core\KaraW3B.Server.Songs.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="Config\config.log4net.xml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+</Project>
