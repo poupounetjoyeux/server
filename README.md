@@ -27,6 +27,7 @@ To start a server instance with the latest version just runs the following comma
 	-p 7373:7373 \
 	-v /path/to/my/songs:/songs \
 	-v /path/to/database:/app/data \
+	-v /path/to/configs:/app/config \
 	ghcr.io/karaw3b/songs-server:latest
 ```
 
