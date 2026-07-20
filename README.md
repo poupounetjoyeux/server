@@ -8,10 +8,6 @@
 
 The KaraW3B server is the hearth of the project and will serves all your songs collections through an API
 
-## 📝 Contract
-
-It must be able to read all version specified by the [UltraStar format rules](https://github.com/UltraStar-Deluxe/format)
-
 ## 🐋 How to run the container ?
 
 Releases of the server build a Docker image on the GitHub Docker Repository (ghcr.io) 
