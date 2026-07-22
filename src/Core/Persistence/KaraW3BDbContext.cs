@@ -71,9 +71,10 @@ namespace KaraW3B.Server.Songs.Core.Persistence
         {
             foreach(var library in dbContext.Libraries)
             {
-                if(library.IsAnalyzing)
+                if(library.AnalyzeStatus == LibraryAnalyzeStatus.Analyzing)
                 {
-                    library.IsAnalyzing = false;
+                    library.AnalyzeStatus = LibraryAnalyzeStatus.Error;
+                    library.LastAnalyzeMessage = "The analyze was interupted";
                 }
             }
             await dbContext.SaveChangesAsync();

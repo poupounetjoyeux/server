@@ -60,13 +60,13 @@ namespace KaraW3B.Server.Songs.Core.Jobs
 
             await using var dbContext = new KaraW3BDbContext();
             library = dbContext.Attach(library).Entity;
-            if (library.IsAnalyzing)
+            if (library.AnalyzeStatus == LibraryAnalyzeStatus.Analyzing)
             {
                 _logger.Warn($"Library with ID {library.Id} is already analyzing.. Aborting..");
                 return;
             }
 
-            library.IsAnalyzing = true;
+            library.AnalyzeStatus = LibraryAnalyzeStatus.Analyzing;
             library.LastAnalyzeMessage = null;
             await dbContext.SaveChangesAsync(context.CancellationToken);
 
@@ -81,30 +81,38 @@ namespace KaraW3B.Server.Songs.Core.Jobs
             var timeWatcher = new Stopwatch();
             timeWatcher.Start();
 
-            var foundFiles = directory.GetFiles("*.txt", SearchOption.AllDirectories).OrderBy(f => f.Name).ToArray();
-            _logger.Info($"Found {foundFiles.Length} potential song file(s) to analyze");
-
-            var parsedSongIds = new ConcurrentBag<Guid>();
-            await Parallel.ForEachAsync(foundFiles, context.CancellationToken,
-                (f, c) => ProcessSongFile(songParserService, ffmpegService, library.Id, analyzeType, parsedSongIds, f, c));
-
-            var songsToDelete =
-                await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id))
-                    .ToListAsync(context.CancellationToken);
-            if (songsToDelete.Count > 0)
+            try
             {
-                dbContext.RemoveRange(songsToDelete);
+                var foundFiles = directory.GetFiles("*.txt", SearchOption.AllDirectories).OrderBy(f => f.Name).ToArray();
+                _logger.Info($"Found {foundFiles.Length} potential song file(s) to analyze");
+
+                var parsedSongIds = new ConcurrentBag<Guid>();
+                await Parallel.ForEachAsync(foundFiles, context.CancellationToken,
+                    (f, c) => ProcessSongFile(songParserService, ffmpegService, library.Id, analyzeType, parsedSongIds, f, c));
+
+                var songsToDelete =
+                     await dbContext.Songs.Where(s => s.LibraryId == library.Id && !parsedSongIds.Contains(s.Id))
+                        .ToListAsync(context.CancellationToken);
+                if (songsToDelete.Count > 0)
+                {
+                    dbContext.RemoveRange(songsToDelete);
+                    await dbContext.SaveChangesAsync(context.CancellationToken);
+                }
+
+                timeWatcher.Stop();
+                library.AnalyzeStatus = LibraryAnalyzeStatus.Success;
+                library.LastAnalyzeMessage = $"Library {library.Name} analyzed {parsedSongIds.Count} song(s) and deleted {songsToDelete.Count} song(s) in {timeWatcher.Elapsed} ms";
                 await dbContext.SaveChangesAsync(context.CancellationToken);
+                _logger.Info(library.LastAnalyzeMessage);
             }
-
-            timeWatcher.Stop();
-
-            library.IsAnalyzing = false;
-            library.LastAnalyzeMessage =
-                $"Library {library.Name} analyzed {parsedSongIds.Count} song(s) and deleted {songsToDelete.Count} song(s) successfully in {timeWatcher.Elapsed}";
-            await dbContext.SaveChangesAsync(context.CancellationToken);
-
-            _logger.Info(library.LastAnalyzeMessage);
+            catch(Exception e) 
+            {
+                timeWatcher.Stop();
+                library.AnalyzeStatus = LibraryAnalyzeStatus.Error;
+                library.LastAnalyzeMessage = $"The library analyze encounter an exception after {timeWatcher.Elapsed} ms: {e}";
+                await dbContext.SaveChangesAsync(context.CancellationToken);
+                _logger.Error(library.LastAnalyzeMessage);
+            }
         }
 
         private static async Task<string> ComputeFileHash(FileInfo file, CancellationToken cancellationToken)

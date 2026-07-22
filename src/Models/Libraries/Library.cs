@@ -28,9 +28,9 @@ namespace KaraW3B.Server.Songs.Models.Libraries
         public string Path { get; init; }
 
         /// <summary>
-        ///     A flag indicating if the library is currently analyzing songs
+        ///     The current status of the library analyze
         /// </summary>
-        public bool IsAnalyzing { get; init; }
+        public LibraryAnalyzeStatus AnalyzeStatus { get; init; }
 
         /// <summary>
         ///     The last analyze message

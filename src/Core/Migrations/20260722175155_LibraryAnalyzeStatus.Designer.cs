@@ -3,6 +3,7 @@ using System;
 using KaraW3B.Server.Songs.Core.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaraW3B.Server.Songs.Core.Migrations
 {
     [DbContext(typeof(KaraW3BDbContext))]
-    partial class KaraW3BDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722175155_LibraryAnalyzeStatus")]
+    partial class LibraryAnalyzeStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

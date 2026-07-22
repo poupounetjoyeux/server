@@ -22,7 +22,7 @@ namespace KaraW3B.Server.Songs.Core.Persistence.Models.Libraries
         public string Path { get; set; }
 
         [Required]
-        public bool IsAnalyzing { get; set; }
+        public LibraryAnalyzeStatus AnalyzeStatus { get; set; }
 
         public string LastAnalyzeMessage { get; set; }
 
@@ -34,7 +34,7 @@ namespace KaraW3B.Server.Songs.Core.Persistence.Models.Libraries
                 Name = Name,
                 Description = Description,
                 Path = Path,
-                IsAnalyzing = IsAnalyzing,
+                AnalyzeStatus = AnalyzeStatus,
                 LastAnalyzeMessage = LastAnalyzeMessage
             };
         }
