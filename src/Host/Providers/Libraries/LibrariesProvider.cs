@@ -21,6 +21,7 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
     {
         private const string SchedulerName = "Libraries";
 
+        private readonly ISettingsService _settingsService;
         private readonly KaraW3BDbContext _dbContext;
         private readonly ISongFileInterpreterService _songFileInterpreterService;
         private readonly IFFmpegService _ffmpegService;
@@ -29,6 +30,7 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
         public LibrariesProvider(ISettingsService settingsService, KaraW3BDbContext dbContext,
             ISongFileInterpreterService songFileInterpreterService, ISchedulerService schedulerService, IFFmpegService ffmpegService)
         {
+            _settingsService = settingsService;
             _dbContext = dbContext;
             _songFileInterpreterService = songFileInterpreterService;
             _ffmpegService = ffmpegService;
@@ -92,6 +94,7 @@ namespace KaraW3B.Server.Songs.Host.Providers.Libraries
                 [AnalyzeLibraryJob.LibraryPathKey] = library.Path,
                 [AnalyzeLibraryJob.AnalyzeTypeKey] = analyzeType,
                 [AnalyzeLibraryJob.SongParserServiceKey] = _songFileInterpreterService,
+                [AnalyzeLibraryJob.MaxParallelismKey] = _settingsService.Settings.ConcurrencySettings.MaxSongParsingConcurrency,
                 [AnalyzeLibraryJob.FFmpegServiceKey] = _ffmpegService
             };
 
