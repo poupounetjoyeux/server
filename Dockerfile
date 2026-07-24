@@ -1,16 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.24
 
 EXPOSE 7373
 
-RUN apt-get update \
-    && apt-get install -y ffmpeg libgdiplus \
-    && apt-get clean  \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk update && apk add ffmpeg libgdiplus
 
 ARG UUID=1001
 ARG GUID=1001
-RUN groupadd -g $GUID -o KaraW3B
-RUN useradd -m -u $UUID -g $GUID -o -s /bin/bash KaraW3B
+RUN addgroup -g $GUID -S KaraW3B && adduser -D -u $UUID -G KaraW3B -s /bin/bash KaraW3B
 
 RUN mkdir /app
 COPY bin/Release/ /app/
