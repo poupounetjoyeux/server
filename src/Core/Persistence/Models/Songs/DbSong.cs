@@ -215,5 +215,14 @@ namespace KaraW3B.Server.Songs.Core.Persistence.Models.Songs
             };
             return songDto;
         }
+
+        public bool IsNotLoadable()
+        {
+            return VideoConversion == ConversionStatus.Mandatory ||
+                   AudioConversion == ConversionStatus.Mandatory ||
+                   InstrumentalConversion == ConversionStatus.Mandatory ||
+                   VocalsConversion == ConversionStatus.Mandatory ||
+                   Alerts.Any(a => a.Level == AlertLevel.Fatal);
+        }
     }
 }
