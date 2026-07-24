@@ -245,10 +245,7 @@ namespace KaraW3B.Server.Songs.Core.Persistence.Models.Songs
 
         public bool IsNotLoadable()
         {
-            return VideoCompatibility == BrowserCompatibility.ConversionMandatory ||
-                   AudioCompatibility == BrowserCompatibility.ConversionMandatory ||
-                   InstrumentalCompatibility == BrowserCompatibility.ConversionMandatory ||
-                   VocalsCompatibility == BrowserCompatibility.ConversionMandatory ||
+            return AudioCompatibility == BrowserCompatibility.ConversionMandatory ||
                    Alerts.Any(a => a.Level == AlertLevel.Fatal);
         }
     }
